@@ -3,7 +3,7 @@
 **Senior Supply Chain Analyst** · Automotive · Customs & Trade Compliance · Data-Driven Operations
 
 Supply chain professional bridging Asian and Western operations, with hands-on experience
-across automotive programs (Lucid, Tesla, Stellantis, HKMC). I turn operational data into
+across automotive programs (Lucid Motors, Tesla, Stellantis, Hyundai and Kia). I turn operational data into
 decisions — customs compliance, inventory accuracy, demand and logistics planning — and
 build the tools to do it.
 
