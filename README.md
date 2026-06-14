@@ -1,16 +1,41 @@
-## Hi there 👋
+# Sanghwa (John) Kim
 
-<!--
-**kshjohn/kshjohn** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
+**Senior Supply Chain Analyst** · Automotive · Customs & Trade Compliance · Data-Driven Operations
 
-Here are some ideas to get you started:
+Supply chain professional bridging Asian and Western operations, with hands-on experience
+across automotive programs (Lucid, Tesla, Stellantis, HKMC). I turn operational data into
+decisions — customs compliance, inventory accuracy, demand and logistics planning — and
+build the tools to do it.
 
-- 🔭 I’m currently working on ...
-- 🌱 I’m currently learning ...
-- 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
--->
+---
+
+### Core Expertise
+- **Supply Chain & Operations** — S&OP, inventory optimization, demand planning, CKD & logistics coordination
+- **Customs & Trade Compliance** — HTS classification, CBP entry summaries, Section 232 / IEEPA tariff analysis
+- **Data & Systems** — SAP, advanced Excel modeling, SQL, Python, R
+
+### Certifications
+APICS **CSCP** · APICS **CPIM** · PMI **PMP** · **Six Sigma Black Belt**
+
+### Languages
+Korean (native) · English (fluent) · Japanese (business) · Mandarin (intermediate) · Polish (learning)
+
+### Education & Background
+- M.S. Supply Chain Management — University of Michigan (Ross)
+- Data Science MicroMasters — UC San Diego (edX)
+- Former ROK Army officer (Captain), Korea Military Academy
+
+---
+
+### Featured Projects
+> Applying supply chain thinking in code.
+
+- **Landed Cost & Tariff Calculator** — HTS-based duty estimator incorporating Section 232 / IEEPA *(in progress)*
+- **Inventory Optimizer** — EOQ, safety stock, and reorder point modeling *(in progress)*
+- **Demand Forecasting Toolkit** — moving-average / exponential-smoothing comparison *(in progress)*
+
+---
+
+### Connect
+- LinkedIn: `[your-linkedin-url]`
+- Email: `[your-email]`
