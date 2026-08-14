@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Polska Pulse — 폴란드 20–40대 관심사 트래커</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1: #fcfcfb;
+    --page: #f9f9f7;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #898781;
+    --grid: #e1e0d9;
+    --baseline: #c3c2b7;
+    --border: rgba(11,11,11,0.10);
+    --series-1: #2a78d6;
+    --series-1-soft: rgba(42,120,214,0.12);
+    --good: #0ca30c;
+    --critical: #d03b3b;
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-1: #1a1a19;
+    --page: #0d0d0d;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --grid: #2c2c2a;
+    --baseline: #383835;
+    --border: rgba(255,255,255,0.10);
+    --series-1: #3987e5;
+    --series-1-soft: rgba(57,135,229,0.18);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --surface-1: #1a1a19;
+      --page: #0d0d0d;
+      --text-primary: #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted: #898781;
+      --grid: #2c2c2a;
+      --baseline: #383835;
+      --border: rgba(255,255,255,0.10);
+      --series-1: #3987e5;
+      --series-1-soft: rgba(57,135,229,0.18);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.5;
+  }
+  a { color: inherit; }
+
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 20px 16px 64px; }
+
+  header.app {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px;
+    padding: 8px 0 16px;
+  }
+  header.app h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+  header.app h1 .flag { font-size: 18px; }
+  header.app .sub { color: var(--text-secondary); font-size: 13px; }
+  header.app .spacer { flex: 1; }
+  .btn {
+    border: 1px solid var(--border); background: var(--surface-1);
+    color: var(--text-primary); border-radius: 8px; padding: 6px 12px;
+    font-size: 13px; cursor: pointer;
+  }
+  .btn:hover { border-color: var(--baseline); }
+  .btn[disabled] { opacity: 0.5; cursor: default; }
+
+  .meta-row { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
+  .src { display: inline-flex; align-items: center; gap: 5px; }
+  .src .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--baseline); display: inline-block; }
+  .src.ok .dot { background: var(--good); }
+  .src.fail .dot { background: var(--critical); }
+  .src.pending .dot { animation: pulse 1.2s infinite; }
+  @keyframes pulse { 50% { opacity: 0.3; } }
+
+  .grid { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px 18px 16px; margin-bottom: 16px;
+  }
+  .card h2 { font-size: 15px; margin: 0 0 2px; }
+  .card .desc { font-size: 12px; color: var(--text-muted); margin: 0 0 14px; }
+
+  /* ---- topic bar chart ---- */
+  .chart { display: grid; grid-template-columns: max-content 1fr; row-gap: 10px; column-gap: 10px; }
+  .chart .row-label {
+    font-size: 13px; color: var(--text-secondary); align-self: center;
+    text-align: right; cursor: pointer; white-space: nowrap;
+  }
+  .chart .row-label .pl { color: var(--text-muted); font-size: 11px; display: block; line-height: 1.1; }
+  .chart .row-label:hover, .chart .row-label.active { color: var(--text-primary); }
+  .chart .track { position: relative; align-self: center; height: 24px; cursor: pointer; }
+  .chart .bar {
+    position: absolute; left: 0; top: 3px; height: 18px;
+    background: var(--series-1);
+    border-radius: 0 4px 4px 0; /* rounded data-end, square at baseline */
+    min-width: 2px;
+    transition: width 0.4s ease;
+  }
+  .chart .track.dim .bar { background: var(--series-1-soft); }
+  .chart .val {
+    position: absolute; top: 0; height: 24px; display: flex; align-items: center;
+    font-size: 12px; color: var(--text-secondary); padding-left: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+  .chart .axis-note { grid-column: 2; font-size: 11px; color: var(--text-muted); border-top: 1px solid var(--grid); padding-top: 6px; }
+
+  .tooltip {
+    position: fixed; z-index: 50; pointer-events: none;
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px; font-size: 12px;
+    color: var(--text-secondary); max-width: 320px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    display: none;
+  }
+  .tooltip b { color: var(--text-primary); }
+  .tooltip .tt-line { margin-top: 4px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* ---- headlines ---- */
+  .filter-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .chip {
+    font-size: 12px; padding: 3px 10px; border-radius: 999px;
+    border: 1px solid var(--border); background: transparent; color: var(--text-secondary);
+    cursor: pointer;
+  }
+  .chip.active { background: var(--series-1); color: #fff; border-color: transparent; }
+  .headline { padding: 9px 0; border-top: 1px solid var(--grid); }
+  .headline:first-of-type { border-top: none; }
+  .headline a { text-decoration: none; font-size: 14px; }
+  .headline a:hover { text-decoration: underline; }
+  .headline .hl-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .tag { color: var(--series-1); }
+  .empty { color: var(--text-muted); font-size: 13px; padding: 12px 0; }
+
+  /* ---- wikipedia trending ---- */
+  ol.wiki { margin: 0; padding-left: 0; counter-reset: w; list-style: none; }
+  ol.wiki li { counter-increment: w; display: flex; gap: 10px; padding: 6px 0; border-top: 1px solid var(--grid); font-size: 13px; align-items: baseline; }
+  ol.wiki li:first-child { border-top: none; }
+  ol.wiki li::before { content: counter(w); color: var(--text-muted); font-size: 11px; min-width: 16px; text-align: right; font-variant-numeric: tabular-nums; }
+  ol.wiki a { text-decoration: none; flex: 1; }
+  ol.wiki a:hover { text-decoration: underline; }
+  ol.wiki .views { color: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+
+  /* ---- snapshot cards ---- */
+  .snap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+  .snap {
+    border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px;
+    background: var(--surface-1);
+  }
+  .snap h3 { font-size: 13px; margin: 0 0 6px; }
+  .snap p { font-size: 12px; color: var(--text-secondary); margin: 0 0 8px; }
+  .vocab { display: flex; flex-wrap: wrap; gap: 4px; }
+  .vocab span {
+    font-size: 11px; border: 1px solid var(--border); border-radius: 6px;
+    padding: 2px 7px; color: var(--text-secondary); background: var(--page);
+  }
+  .vocab b { color: var(--text-primary); font-weight: 600; }
+
+  footer { margin-top: 24px; font-size: 11px; color: var(--text-muted); line-height: 1.7; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="app">
+    <h1><span class="flag">🇵🇱</span> Polska Pulse</h1>
+    <span class="sub">폴란드 20–40대가 지금 관심 갖는 시사·이슈 트래커</span>
+    <span class="spacer"></span>
+    <button class="btn" id="btn-refresh">↻ 새로고침</button>
+    <button class="btn" id="btn-theme" title="테마 전환">◐</button>
+  </header>
+
+  <div class="meta-row" id="source-status"></div>
+
+  <div class="grid">
+    <div class="col-main">
+
+      <section class="card">
+        <h2>토픽별 언급량</h2>
+        <p class="desc" id="chart-desc">최근 헤드라인에서 각 토픽 키워드가 잡힌 기사 수 · 토픽을 클릭하면 아래 헤드라인이 필터링됩니다</p>
+        <div class="chart" id="chart"></div>
+      </section>
+
+      <section class="card">
+        <h2>헤드라인</h2>
+        <p class="desc">폴란드 주요 매체 RSS + r/Polska 인기글 통합 피드 (최신순)</p>
+        <div class="filter-row" id="filters"></div>
+        <div id="headlines"></div>
+      </section>
+
+    </div>
+    <div class="col-side">
+
+      <section class="card">
+        <h2>폴란드어 위키피디아 인기 문서</h2>
+        <p class="desc" id="wiki-desc">어제 하루 조회수 상위 — 지금 폴란드인들이 찾아보는 것</p>
+        <ol class="wiki" id="wiki"></ol>
+      </section>
+
+      <section class="card">
+        <h2>세대 스냅샷 <span style="font-weight:400;color:var(--text-muted);font-size:12px">— 20–40대 폴란드인의 관심 지형</span></h2>
+        <p class="desc">공개 여론조사·통계에서 반복적으로 확인되는 경향 요약 + 관련 폴란드어 어휘</p>
+        <div class="snap-grid" id="snapshots"></div>
+      </section>
+
+    </div>
+  </div>
+
+  <footer>
+    데이터 출처: TVN24 · Polsat News · Bankier.pl · RMF24 · Interia Fakty (RSS), reddit r/Polska, Wikimedia Pageviews API.
+    모든 수집은 브라우저에서 직접 이루어지며 서버에 저장되지 않습니다. RSS는 공개 CORS 프록시(allorigins.win)를 경유합니다.
+    토픽 분류는 키워드 기반 근사치입니다. · <span id="last-updated"></span>
+  </footer>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+"use strict";
+
+/* ---------------- config ---------------- */
+
+const PROXY = u => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u);
+
+const FEEDS = [
+  { id: "tvn24",   name: "TVN24",       url: "https://tvn24.pl/najnowsze.xml" },
+  { id: "polsat",  name: "Polsat News", url: "https://www.polsatnews.pl/rss/wszystkie.xml" },
+  { id: "bankier", name: "Bankier.pl",  url: "https://www.bankier.pl/rss/wiadomosci.xml" },
+  { id: "rmf24",   name: "RMF24",       url: "https://www.rmf24.pl/feed" },
+  { id: "interia", name: "Interia",     url: "https://fakty.interia.pl/feed" },
+];
+
+/* 20–40대 폴란드인의 주요 관심 영역 — 키워드는 폴란드어 어간 기준 */
+const TOPICS = [
+  { id: "polityka",  ko: "정치·선거",      pl: "polityka",
+    kw: ["sejm","tusk","kaczyńsk","rząd","wybor","prezydent","nawrocki","konfederacj","minister","koalicj","ustaw","premier","pis"] },
+  { id: "mieszkania", ko: "주거·부동산",   pl: "mieszkania",
+    kw: ["mieszkan","nieruchomoś","kredyt","najem","najmu","deweloper","czynsz","hipotecz"] },
+  { id: "gospodarka", ko: "경제·물가",     pl: "gospodarka",
+    kw: ["inflacj","ceny","gospodark","podatk","zus","płac","stopy procentowe","nbp","budżet","drożyzn","zloty","złot"] },
+  { id: "bezpieczenstwo", ko: "안보·우크라이나", pl: "bezpieczeństwo",
+    kw: ["ukrain","rosj","wojn","nato","wojsk","obron","granic","dron","putin","zełensk"] },
+  { id: "praca",     ko: "일·커리어",      pl: "praca",
+    kw: ["prac","zarobk","zwolnieni","bezroboci","wynagrodzeni","etat","rekrutacj"] },
+  { id: "technologia", ko: "기술·AI",      pl: "technologia",
+    kw: ["sztuczna inteligencja","sztucznej inteligencji","technolog","cyber","aplikacj","startup","chatgpt","ai"] },
+  { id: "zdrowie",   ko: "건강·심리",      pl: "zdrowie",
+    kw: ["zdrowi","psychiczn","nfz","lekarz","szpital","depresj","terapi"] },
+  { id: "klimat",    ko: "기후·에너지",    pl: "klimat i energia",
+    kw: ["klimat","energi","smog","atom","fotowoltaik","elektrown","węgl","oze"] },
+  { id: "kultura",   ko: "문화·엔터",      pl: "kultura",
+    kw: ["film","serial","muzyk","koncert","netflix","festiwal","kino"] },
+  { id: "sport",     ko: "스포츠",         pl: "sport",
+    kw: ["lewandowsk","świątek","reprezentacj","ekstraklas","mecz","siatk","żużel","hurkacz"] },
+];
+
+/* 공개 통계·여론조사(GUS, CBOS, Eurostat 등)에서 꾸준히 확인되는 경향의 요약 */
+const SNAPSHOTS = [
+  { t: "주거가 최대 고민", p: "대도시 아파트값·임대료 급등으로 젊은 층의 내 집 마련이 어려워져, 20~30대 상당수가 부모와 동거하거나 셰어하우스에 삽니다. 주택 정책은 선거 때마다 핵심 쟁점입니다.",
+    v: [["mieszkanie","아파트/집"],["kredyt hipoteczny","주택담보대출"],["wynajem","임대"]] },
+  { t: "생활비·물가 민감", p: "2022~23년 고물가(drożyzna)의 기억이 강하게 남아, 식료품·에너지 가격과 금리는 이 세대의 일상 대화 주제입니다.",
+    v: [["drożyzna","살인적 물가"],["ceny","가격"],["stopy procentowe","금리"]] },
+  { t: "안보는 생활 이슈", p: "우크라이나 접경국으로서 전쟁·국방·병역 문제가 추상적 이슈가 아닌 생활 관심사입니다. 국방비 지출 지지율이 높고, 안보 앱·훈련 참여도 화제입니다.",
+    v: [["wojna","전쟁"],["bezpieczeństwo","안보"],["obronność","국방"]] },
+  { t: "일하는 방식의 변화", p: "IT를 중심으로 B2B(개인사업자) 계약 문화가 확산됐고, 원격근무·번아웃·워라밸 논의가 활발합니다. 최저임금의 빠른 인상도 큰 화제.",
+    v: [["umowa B2B","B2B 계약"],["praca zdalna","원격근무"],["wypalenie zawodowe","번아웃"]] },
+  { t: "정신건강 개방적", p: "젊은 세대일수록 심리상담·치료에 개방적이며, 공공 의료(NFZ) 대기 문제로 사설 상담 수요가 급증했습니다.",
+    v: [["zdrowie psychiczne","정신건강"],["terapia","심리치료"]] },
+  { t: "세속화와 가치 변화", p: "젊은 층의 종교 이탈이 빠르고, 낙태법·동성 파트너십 등 사회 이슈에서 기성세대와 뚜렷한 시각차를 보입니다. 출산율 저하도 뜨거운 논쟁거리입니다.",
+    v: [["dzietność","출산율"],["związek partnerski","시민결합"]] },
+  { t: "디지털 일상", p: "BLIK 간편결제, InPost 파치코마트(무인택배함), Allegro 쇼핑이 일상 인프라입니다. 핀테크·전자정부(mObywatel) 이용률이 유럽 상위권.",
+    v: [["paczkomat","무인택배함"],["BLIK","간편결제"],["mObywatel","모바일 신분증 앱"]] },
+  { t: "여가와 팬덤", p: "축구(레반도프스키)·테니스(시비옹테크)·배구가 인기이고, 국내 OTT 오리지널과 음악 페스티벌, 저가항공 유럽여행이 보편적 여가입니다.",
+    v: [["siatkówka","배구"],["podróże","여행"]] },
+];
+
+/* ---------------- state ---------------- */
+
+const state = {
+  items: [],          // {title, link, date, source, topics:[]}
+  wiki: [],
+  filter: null,       // topic id or null
+  counts: {},         // topic id -> count
+};
+
+/* ---------------- utils ---------------- */
+
+const $ = s => document.querySelector(s);
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c =>
+    ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+
+function relTime(d) {
+  if (!d) return "";
+  const min = Math.round((Date.now() - d.getTime()) / 60000);
+  if (min < 1) return "방금";
+  if (min < 60) return min + "분 전";
+  const h = Math.round(min / 60);
+  if (h < 24) return h + "시간 전";
+  return Math.round(h / 24) + "일 전";
+}
+
+/* 짧은 키워드(≤3자)는 단어 경계를 요구, 긴 키워드는 부분일치(어간 매칭) */
+const shortKw = {};
+function matchTopic(topic, text) {
+  for (const k of topic.kw) {
+    if (k.length <= 3) {
+      if (!shortKw[k]) shortKw[k] = new RegExp("(?:^|\\P{L})" + k + "(?:\\P{L}|$)", "iu");
+      if (shortKw[k].test(text)) return true;
+    } else if (text.includes(k)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function classify(item) {
+  const text = (item.title + " " + (item.summary || "")).toLowerCase();
+  item.topics = TOPICS.filter(t => matchTopic(t, text)).map(t => t.id);
+}
+
+/* ---------------- fetchers ---------------- */
+
+async function fetchWithTimeout(url, ms = 15000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try {
+    const res = await fetch(url, { signal: ctrl.signal });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return res;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function parseRss(xmlText, sourceName) {
+  const doc = new DOMParser().parseFromString(xmlText, "text/xml");
+  if (doc.querySelector("parsererror")) throw new Error("XML parse error");
+  const nodes = [...doc.querySelectorAll("item, entry")];
+  return nodes.slice(0, 30).map(n => {
+    const get = sel => n.querySelector(sel)?.textContent?.trim() || "";
+    let link = get("link");
+    if (!link) link = n.querySelector("link")?.getAttribute("href") || "";
+    const dateStr = get("pubDate") || get("updated") || get("published") ||
+      n.getElementsByTagNameNS("http://purl.org/dc/elements/1.1/", "date")[0]?.textContent || "";
+    const d = dateStr ? new Date(dateStr) : null;
+    return {
+      title: get("title"),
+      link,
+      summary: get("description") || get("summary"),
+      date: d && !isNaN(d) ? d : null,
+      source: sourceName,
+    };
+  }).filter(i => i.title && i.link);
+}
+
+async function loadFeed(feed) {
+  const res = await fetchWithTimeout(PROXY(feed.url));
+  return parseRss(await res.text(), feed.name);
+}
+
+async function loadReddit() {
+  const url = "https://www.reddit.com/r/Polska/hot.json?limit=30&raw_json=1";
+  let res;
+  try {
+    res = await fetchWithTimeout(url);
+  } catch {
+    res = await fetchWithTimeout(PROXY(url));
+  }
+  const json = await res.json();
+  return (json?.data?.children || [])
+    .map(c => c.data)
+    .filter(p => p && !p.stickied)
+    .map(p => ({
+      title: p.title,
+      link: "https://www.reddit.com" + p.permalink,
+      summary: p.selftext ? p.selftext.slice(0, 300) : "",
+      date: new Date(p.created_utc * 1000),
+      source: "r/Polska",
+      score: p.score,
+    }));
+}
+
+async function loadWiki() {
+  for (let back = 1; back <= 3; back++) {
+    const d = new Date(Date.now() - back * 86400000);
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(d.getUTCDate()).padStart(2, "0");
+    const url = `https://wikimedia.org/api/rest_v1/metrics/pageviews/top/pl.wikipedia/all-access/${y}/${m}/${day}`;
+    try {
+      const res = await fetchWithTimeout(url);
+      const json = await res.json();
+      const skip = /^(Wikipedia:|Specjalna:|Pomoc:|Portal:|Szablon:|Plik:|Dyskusja|Kategoria:|Wikisłownik|Główna)/i;
+      const list = (json?.items?.[0]?.articles || [])
+        .filter(a => !skip.test(a.article))
+        .slice(0, 15)
+        .map(a => ({
+          title: a.article.replace(/_/g, " "),
+          url: "https://pl.wikipedia.org/wiki/" + encodeURIComponent(a.article),
+          views: a.views,
+        }));
+      if (list.length) {
+        $("#wiki-desc").textContent = `${y}-${m}-${day} 하루 조회수 상위 — 지금 폴란드인들이 찾아보는 것`;
+        return list;
+      }
+    } catch { /* try previous day */ }
+  }
+  return [];
+}
+
+/* ---------------- rendering ---------------- */
+
+function setSourceStatus(statuses) {
+  $("#source-status").innerHTML = statuses.map(s =>
+    `<span class="src ${s.state}"><span class="dot"></span>${esc(s.name)}</span>`
+  ).join("");
+}
+
+function renderChart() {
+  const counts = {};
+  for (const t of TOPICS) counts[t.id] = 0;
+  for (const it of state.items) for (const tid of it.topics) counts[tid]++;
+  state.counts = counts;
+
+  const rows = TOPICS
+    .map(t => ({ ...t, n: counts[t.id] }))
+    .sort((a, b) => b.n - a.n);
+  const max = Math.max(1, ...rows.map(r => r.n));
+  const total = state.items.length || 1;
+
+  const chart = $("#chart");
+  chart.innerHTML = "";
+  for (const r of rows) {
+    const label = document.createElement("div");
+    label.className = "row-label" + (state.filter === r.id ? " active" : "");
+    label.innerHTML = `${esc(r.ko)}<span class="pl">${esc(r.pl)}</span>`;
+
+    const track = document.createElement("div");
+    track.className = "track" + (state.filter && state.filter !== r.id ? " dim" : "");
+    const pct = Math.round((r.n / max) * 100);
+    track.innerHTML =
+      `<div class="bar" style="width:${pct * 0.82}%"></div>` +
+      `<div class="val" style="left:${pct * 0.82}%">${r.n}</div>`;
+
+    const toggle = () => { state.filter = state.filter === r.id ? null : r.id; renderChart(); renderFilters(); renderHeadlines(); };
+    label.addEventListener("click", toggle);
+    track.addEventListener("click", toggle);
+
+    const tt = ev => {
+      const samples = state.items.filter(i => i.topics.includes(r.id)).slice(0, 3);
+      showTooltip(ev,
+        `<b>${esc(r.ko)}</b> (${esc(r.pl)}) — 기사 ${r.n}건 · 전체의 ${Math.round(r.n / total * 100)}%` +
+        samples.map(s => `<div class="tt-line">· ${esc(s.title)}</div>`).join(""));
+    };
+    track.addEventListener("mousemove", tt);
+    label.addEventListener("mousemove", tt);
+    track.addEventListener("mouseleave", hideTooltip);
+    label.addEventListener("mouseleave", hideTooltip);
+
+    chart.append(label, track);
+  }
+  const note = document.createElement("div");
+  note.className = "axis-note";
+  note.textContent = `기사 수 (총 ${state.items.length}건 분석 · 한 기사가 여러 토픽에 속할 수 있음)`;
+  chart.append(note);
+}
+
+function renderFilters() {
+  const el = $("#filters");
+  const chips = [{ id: null, ko: "전체" }, ...TOPICS];
+  el.innerHTML = chips.map(c =>
+    `<button class="chip ${state.filter === c.id ? "active" : ""}" data-id="${c.id ?? ""}">${esc(c.ko)}${c.id ? ` <span style="opacity:.7">${state.counts[c.id] ?? 0}</span>` : ""}</button>`
+  ).join("");
+  el.querySelectorAll(".chip").forEach(b =>
+    b.addEventListener("click", () => {
+      state.filter = b.dataset.id || null;
+      renderChart(); renderFilters(); renderHeadlines();
+    }));
+}
+
+function renderHeadlines() {
+  const el = $("#headlines");
+  let items = state.items;
+  if (state.filter) items = items.filter(i => i.topics.includes(state.filter));
+  items = items.slice(0, 40);
+  if (!items.length) {
+    el.innerHTML = `<div class="empty">표시할 헤드라인이 없습니다. 새로고침을 눌러보세요.</div>`;
+    return;
+  }
+  const topicName = id => TOPICS.find(t => t.id === id)?.ko || id;
+  el.innerHTML = items.map(i => `
+    <div class="headline">
+      <a href="${esc(i.link)}" target="_blank" rel="noopener noreferrer">${esc(i.title)}</a>
+      <div class="hl-meta">
+        <span>${esc(i.source)}</span>
+        ${i.date ? `<span>${relTime(i.date)}</span>` : ""}
+        ${i.score != null ? `<span>▲ ${i.score}</span>` : ""}
+        ${i.topics.map(t => `<span class="tag">#${esc(topicName(t))}</span>`).join("")}
+      </div>
+    </div>`).join("");
+}
+
+function renderWiki() {
+  const el = $("#wiki");
+  if (!state.wiki.length) {
+    el.innerHTML = `<div class="empty">위키피디아 데이터를 불러오지 못했습니다.</div>`;
+    return;
+  }
+  el.innerHTML = state.wiki.map(w => `
+    <li>
+      <a href="${esc(w.url)}" target="_blank" rel="noopener noreferrer">${esc(w.title)}</a>
+      <span class="views">${w.views.toLocaleString("ko-KR")}</span>
+    </li>`).join("");
+}
+
+function renderSnapshots() {
+  $("#snapshots").innerHTML = SNAPSHOTS.map(s => `
+    <div class="snap">
+      <h3>${esc(s.t)}</h3>
+      <p>${esc(s.p)}</p>
+      <div class="vocab">${s.v.map(([pl, ko]) => `<span><b>${esc(pl)}</b> ${esc(ko)}</span>`).join("")}</div>
+    </div>`).join("");
+}
+
+/* ---------------- tooltip ---------------- */
+
+function showTooltip(ev, html) {
+  const tt = $("#tooltip");
+  tt.innerHTML = html;
+  tt.style.display = "block";
+  const pad = 14;
+  let x = ev.clientX + pad, y = ev.clientY + pad;
+  const r = tt.getBoundingClientRect();
+  if (x + r.width > innerWidth - 8) x = ev.clientX - r.width - pad;
+  if (y + r.height > innerHeight - 8) y = ev.clientY - r.height - pad;
+  tt.style.left = x + "px";
+  tt.style.top = y + "px";
+}
+function hideTooltip() { $("#tooltip").style.display = "none"; }
+
+/* ---------------- cache ---------------- */
+
+const CACHE_KEY = "polska-pulse-v1";
+
+function saveCache() {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      at: Date.now(),
+      items: state.items.map(i => ({ ...i, date: i.date ? i.date.getTime() : null })),
+      wiki: state.wiki,
+    }));
+  } catch { /* quota — ignore */ }
+}
+
+function loadCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return false;
+    const c = JSON.parse(raw);
+    state.items = (c.items || []).map(i => ({ ...i, date: i.date ? new Date(i.date) : null }));
+    state.wiki = c.wiki || [];
+    if (state.items.length) {
+      $("#last-updated").textContent = "마지막 수집: " + new Date(c.at).toLocaleString("ko-KR") + " (캐시)";
+      return true;
+    }
+  } catch { /* corrupt cache — ignore */ }
+  return false;
+}
+
+/* ---------------- refresh ---------------- */
+
+async function refresh() {
+  const btn = $("#btn-refresh");
+  btn.disabled = true;
+
+  const sources = [
+    ...FEEDS.map(f => ({ name: f.name, state: "pending" })),
+    { name: "r/Polska", state: "pending" },
+    { name: "Wikipedia", state: "pending" },
+  ];
+  setSourceStatus(sources);
+
+  const tasks = [
+    ...FEEDS.map((f, idx) =>
+      loadFeed(f)
+        .then(items => { sources[idx].state = "ok"; return items; })
+        .catch(() => { sources[idx].state = "fail"; return []; })),
+    loadReddit()
+      .then(items => { sources[FEEDS.length].state = "ok"; return items; })
+      .catch(() => { sources[FEEDS.length].state = "fail"; return []; }),
+  ];
+  const wikiTask = loadWiki()
+    .then(list => { sources[FEEDS.length + 1].state = list.length ? "ok" : "fail"; return list; })
+    .catch(() => { sources[FEEDS.length + 1].state = "fail"; return []; });
+
+  const [results, wiki] = await Promise.all([Promise.all(tasks), wikiTask]);
+  setSourceStatus(sources);
+
+  const merged = results.flat();
+  if (merged.length) {
+    // dedupe by normalized title
+    const seen = new Set();
+    state.items = merged.filter(i => {
+      const key = i.title.toLowerCase().replace(/\s+/g, " ").trim();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    state.items.forEach(classify);
+    state.items.sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
+    $("#last-updated").textContent = "마지막 수집: " + new Date().toLocaleString("ko-KR");
+  }
+  if (wiki.length) state.wiki = wiki;
+
+  saveCache();
+  renderChart(); renderFilters(); renderHeadlines(); renderWiki();
+  btn.disabled = false;
+}
+
+/* ---------------- theme ---------------- */
+
+function initTheme() {
+  const saved = localStorage.getItem("polska-pulse-theme");
+  if (saved) document.documentElement.dataset.theme = saved;
+  $("#btn-theme").addEventListener("click", () => {
+    const cur = document.documentElement.dataset.theme ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    const next = cur === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem("polska-pulse-theme", next);
+  });
+}
+
+/* ---------------- boot ---------------- */
+
+initTheme();
+renderSnapshots();
+if (loadCache()) {
+  state.items.forEach(classify);
+  renderChart(); renderFilters(); renderHeadlines(); renderWiki();
+}
+$("#btn-refresh").addEventListener("click", refresh);
+refresh();
+</script>
+</body>
+</html>
