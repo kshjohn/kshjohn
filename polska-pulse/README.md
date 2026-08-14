@@ -24,8 +24,9 @@ A single-file web app that tracks what Polish people aged 20–40 are paying att
 open polska-pulse/index.html   # 또는 브라우저로 파일 열기
 ```
 
-GitHub Pages 배포: 저장소 **Settings → Pages → Deploy from a branch**에서 브랜치를 선택하면
-`https://<username>.github.io/<repo>/polska-pulse/` 에서 접속 가능.
+GitHub Pages 배포: 저장소 **Settings → Pages → Deploy from a branch**에서 브랜치와 `/ (root)`를
+선택하면 `https://kshjohn.github.io/polska-pulse/` 에서 접속 가능.
+(프로필 저장소 `kshjohn/kshjohn`는 사용자 사이트로 배포되어 저장소 이름이 경로에 붙지 않습니다.)
 
 ## Notes & limitations
 
