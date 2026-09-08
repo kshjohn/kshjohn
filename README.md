@@ -30,6 +30,7 @@ Korean (native) · English (fluent) · Japanese (business) · Mandarin (intermed
 ### Featured Projects
 > Applying supply chain thinking in code.
 
+- **[Polski A1–C1](./polski-a1c1/)** — installable Polish self-study app (A1→C1): vocabulary, 7 cases, conjugation tables, grammar lessons, drills and mock exams. Works offline on the phone *(live)*
 - **[Polska Pulse](./polska-pulse/)** — dashboard tracking current affairs & interests of Poles aged 20–40, with Polish vocabulary notes *(live)*
 - **Landed Cost & Tariff Calculator** — HTS-based duty estimator incorporating Section 232 / IEEPA *(in progress)*
 - **Inventory Optimizer** — EOQ, safety stock, and reorder point modeling *(in progress)*
