@@ -1,4 +1,4 @@
-# Sanghwa (John) Kim
+# Sanghwa Kim
 
 **Senior Supply Chain Analyst** · Automotive · Customs & Trade Compliance · Data-Driven Operations
 
