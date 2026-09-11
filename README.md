@@ -38,5 +38,5 @@ Korean (native) · English (fluent) · Japanese (business) · Mandarin (intermed
 ---
 
 ### Connect
-- LinkedIn: `[https://www.linkedin.com/in/john-kim-a55326145/?locale=en_US]`
+- LinkedIn: `[https://www.linkedin.com/in/john-kim-a55326145]`
 - Email: `[kshjohn1@gmail.com]`
