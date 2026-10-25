@@ -25,8 +25,8 @@ open polska-pulse/index.html   # 또는 브라우저로 파일 열기
 ```
 
 GitHub Pages 배포: 저장소 **Settings → Pages → Deploy from a branch**에서 브랜치와 `/ (root)`를
-선택하면 `https://kshjohn.github.io/polska-pulse/` 에서 접속 가능.
-(프로필 저장소 `kshjohn/kshjohn`는 사용자 사이트로 배포되어 저장소 이름이 경로에 붙지 않습니다.)
+선택하면 `https://kshjohn.github.io/kshjohn/polska-pulse/` 에서 접속 가능.
+(저장소 이름이 `kshjohn.github.io`가 아닌 한 Pages 주소에는 저장소 이름이 경로에 붙습니다. 자세한 내용은 루트의 `WEBSITE_GUIDE.md` 참고.)
 
 ## Notes & limitations
 
