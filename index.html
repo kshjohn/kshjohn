@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sanghwa Kim</title>
+<meta name="description" content="Personal portfolio and résumé website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ======================================================================
+   디자인은 이 파일에서, 내용은 profile.js 에서 수정합니다.
+   색상은 :root 의 변수만 바꾸면 전체에 반영됩니다.
+   ====================================================================== */
+:root {
+  --accent: #1f5fbf;
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --text: #16181d;
+  --muted: #5b6372;
+  --line: #e3e6eb;
+  --chip: #eef2f8;
+  --shadow: 0 1px 2px rgba(16,24,40,.05), 0 8px 24px -12px rgba(16,24,40,.12);
+  --radius: 14px;
+  --max: 960px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1115; --surface: #171a21; --text: #e8eaef; --muted: #9aa3b2;
+    --line: #262b36; --chip: #1f2430;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1115; --surface: #171a21; --text: #e8eaef; --muted: #9aa3b2;
+  --line: #262b36; --chip: #1f2430;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font-family: Inter, "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+h1, h2, h3 { line-height: 1.25; margin: 0; letter-spacing: -0.01em; }
+p { margin: 0 0 .9em; }
+ul { margin: 0; padding-left: 1.2em; }
+.wrap { max-width: var(--max); margin: 0 auto; padding: 0 16px; }
+
+/* 상단 바 */
+.topbar {
+  position: sticky; top: 0; z-index: 10;
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  backdrop-filter: saturate(1.4) blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.topbar .wrap { display: flex; align-items: center; gap: 12px; height: 56px; }
+.brand { font-weight: 700; margin-right: auto; color: var(--text); white-space: nowrap; }
+.nav { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+.nav::-webkit-scrollbar { display: none; }
+.nav a { color: var(--muted); padding: 6px 10px; border-radius: 8px; font-size: 14px; font-weight: 500; white-space: nowrap; }
+.nav a:hover { background: var(--chip); color: var(--text); text-decoration: none; }
+.ctrls { display: flex; gap: 6px; }
+.btn-ghost {
+  border: 1px solid var(--line); background: var(--surface); color: var(--text);
+  border-radius: 8px; padding: 5px 10px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.btn-ghost:hover { border-color: var(--accent); }
+.btn-ghost[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* 히어로 */
+.hero { padding: 56px 0 40px; }
+.hero .grid { display: grid; grid-template-columns: 1fr auto; gap: 32px; align-items: center; }
+.avatar {
+  width: 148px; height: 148px; border-radius: 50%; object-fit: cover;
+  border: 4px solid var(--surface); box-shadow: var(--shadow); background: var(--chip);
+  display: grid; place-items: center; font-size: 44px; font-weight: 700; color: var(--accent);
+}
+.hero h1 { font-size: clamp(32px, 5vw, 46px); font-weight: 700; }
+.hero .title { font-size: 20px; font-weight: 600; color: var(--accent); margin-top: 6px; }
+.hero .tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 16px; }
+.hero .tagline { font-size: 17px; color: var(--muted); max-width: 60ch; }
+.hero .loc { font-size: 14px; color: var(--muted); margin-bottom: 18px; }
+.chip { background: var(--chip); color: var(--text); border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 500; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; border-radius: 10px; padding: 10px 16px;
+  font-weight: 600; font-size: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--text);
+  cursor: pointer; font-family: inherit;
+}
+.btn:hover { text-decoration: none; border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn.primary:hover { filter: brightness(1.08); }
+
+/* 섹션 공통 */
+section { padding: 36px 0; }
+section + section { border-top: 1px solid var(--line); }
+.sec-h { display: flex; align-items: baseline; gap: 14px; margin-bottom: 20px; }
+.sec-h h2 { font-size: 24px; font-weight: 700; }
+.sec-h .intro { color: var(--muted); font-size: 15px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 22px; box-shadow: var(--shadow); }
+
+/* 소개 */
+.about { display: grid; grid-template-columns: 1.6fr 1fr; gap: 24px; }
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-content: start; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+.stat .v { font-size: 26px; font-weight: 700; color: var(--accent); line-height: 1.1; }
+.stat .l { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+/* 경력 타임라인 */
+.timeline { display: grid; gap: 16px; }
+.job { display: grid; grid-template-columns: 130px 1fr; gap: 18px; }
+.job .when { color: var(--muted); font-size: 14px; font-weight: 500; padding-top: 22px; }
+.job h3 { font-size: 17px; font-weight: 600; }
+.job .org { color: var(--muted); font-size: 14px; margin: 2px 0 10px; }
+.job ul { color: var(--text); font-size: 15px; }
+.job li + li { margin-top: 4px; }
+
+/* 역량 */
+.skills { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.skills h3 { font-size: 15px; font-weight: 600; margin-bottom: 10px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.subrow { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+.langs { display: grid; gap: 6px; font-size: 15px; }
+.langs div { display: flex; justify-content: space-between; border-bottom: 1px dashed var(--line); padding: 4px 0; }
+.langs span:last-child { color: var(--muted); }
+
+/* 프로젝트 */
+.projects { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.proj { display: flex; flex-direction: column; gap: 8px; }
+.proj .head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.proj h3 { font-size: 17px; font-weight: 600; }
+.proj .status { font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 999px; background: var(--chip); color: var(--muted); white-space: nowrap; }
+.proj .status.live { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
+.proj p { color: var(--muted); font-size: 15px; margin: 0; flex: 1; }
+.proj .tech { display: flex; flex-wrap: wrap; gap: 6px; }
+.proj .tech span { font-size: 12px; color: var(--muted); background: var(--chip); padding: 2px 8px; border-radius: 6px; }
+.proj a.more { font-size: 14px; font-weight: 600; }
+
+/* 학력 */
+.edu { display: grid; gap: 10px; }
+.edu .row { display: grid; grid-template-columns: 1fr auto; gap: 12px; }
+.edu .d { font-weight: 600; }
+.edu .s { color: var(--muted); font-size: 14px; }
+.edu .y { color: var(--muted); font-size: 14px; }
+
+/* 연락처 */
+.contact p { color: var(--muted); max-width: 60ch; }
+footer { padding: 28px 0 40px; color: var(--muted); font-size: 13px; text-align: center; border-top: 1px solid var(--line); }
+[hidden] { display: none !important; }
+
+/* 모바일 */
+@media (max-width: 720px) {
+  .hero { padding: 36px 0 28px; }
+  .hero .grid { grid-template-columns: 1fr; gap: 20px; }
+  .hero .grid .avatar { order: -1; width: 108px; height: 108px; font-size: 32px; }
+  .about, .skills, .projects, .subrow { grid-template-columns: 1fr; }
+  .job { grid-template-columns: 1fr; gap: 4px; }
+  .job .when { padding-top: 0; }
+  .brand { display: none; }
+}
+
+/* 인쇄 (PDF 저장) */
+@media print {
+  :root { --bg: #fff; --surface: #fff; --shadow: none; --text: #000; --muted: #444; }
+  .topbar, .actions, .btn, footer { display: none !important; }
+  body { font-size: 12.5px; }
+  section { padding: 16px 0; break-inside: avoid; }
+  .card { border-color: #ccc; }
+  a { color: inherit; }
+  .hero { padding: 0 0 12px; }
+  .avatar { width: 96px; height: 96px; }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <a href="#top" class="brand" id="brand">Sanghwa Kim</a>
+    <nav class="nav" id="nav"></nav>
+    <div class="ctrls">
+      <button class="btn-ghost" id="langBtn" type="button" aria-label="Switch language">KO</button>
+      <button class="btn-ghost" id="themeBtn" type="button" aria-label="Toggle dark mode">◐</button>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero" id="hero">
+    <div class="wrap grid">
+      <div>
+        <h1 id="h-name"></h1>
+        <div class="title" id="h-title"></div>
+        <div class="tags" id="h-tags"></div>
+        <p class="tagline" id="h-tagline"></p>
+        <div class="loc" id="h-loc"></div>
+        <div class="actions" id="h-actions"></div>
+      </div>
+      <div id="h-avatar"></div>
+    </div>
+  </section>
+
+  <section id="about"><div class="wrap">
+    <div class="sec-h"><h2 id="about-h"></h2></div>
+    <div class="about">
+      <div class="card" id="about-text"></div>
+      <div class="stats" id="about-stats"></div>
+    </div>
+  </div></section>
+
+  <section id="experience"><div class="wrap">
+    <div class="sec-h"><h2 id="exp-h"></h2></div>
+    <div class="timeline" id="exp-list"></div>
+  </div></section>
+
+  <section id="skills"><div class="wrap">
+    <div class="sec-h"><h2 id="skills-h"></h2></div>
+    <div class="skills" id="skills-groups"></div>
+    <div class="subrow">
+      <div class="card" id="certs-card"><h3 id="certs-h"></h3><div class="chips" id="certs"></div></div>
+      <div class="card" id="langs-card"><h3 id="langs-h"></h3><div class="langs" id="langs"></div></div>
+    </div>
+  </div></section>
+
+  <section id="projects"><div class="wrap">
+    <div class="sec-h"><h2 id="proj-h"></h2><span class="intro" id="proj-intro"></span></div>
+    <div class="projects" id="proj-list"></div>
+  </div></section>
+
+  <section id="education"><div class="wrap">
+    <div class="sec-h"><h2 id="edu-h"></h2></div>
+    <div class="card edu" id="edu-list"></div>
+  </div></section>
+
+  <section id="contact"><div class="wrap">
+    <div class="sec-h"><h2 id="contact-h"></h2></div>
+    <div class="contact">
+      <p id="contact-text"></p>
+      <div class="actions" id="contact-actions"></div>
+    </div>
+  </div></section>
+</main>
+
+<footer><div class="wrap" id="footer"></div></footer>
+
+<script src="profile.js"></script>
+<script>
+(function () {
+  var P = window.PROFILE, S = P.settings;
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
+  var chips = function (arr, cls) { return (arr || []).map(function (t) { return '<span class="' + (cls || "chip") + '">' + esc(t) + "</span>"; }).join(""); };
+
+  // 테마
+  var root = document.documentElement;
+  try { var t = localStorage.getItem("theme"); if (t) root.setAttribute("data-theme", t); } catch (e) {}
+  $("themeBtn").onclick = function () {
+    var dark = root.getAttribute("data-theme") === "dark" ||
+      (!root.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches);
+    var next = dark ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    try { localStorage.setItem("theme", next); } catch (e) {}
+  };
+  if (S.accent) root.style.setProperty("--accent", S.accent);
+
+  // 언어
+  var lang = S.defaultLang || "en";
+  try { lang = localStorage.getItem("lang") || lang; } catch (e) {}
+  if (!P[lang]) lang = "en";
+
+  function pick(key) { // 현재 언어에 없으면 영어로 대체
+    var cur = P[lang] && P[lang][key];
+    return (cur && Object.keys(cur).length) ? cur : P.en[key];
+  }
+
+  function render() {
+    var ui = pick("ui"), hero = pick("hero"), about = pick("about"), exp = pick("experience"),
+        sk = pick("skills"), pr = pick("projects"), ed = pick("education"), ct = pick("contact");
+    document.documentElement.lang = lang;
+    document.title = S.siteTitle || hero.name;
+    $("langBtn").textContent = lang === "en" ? "KO" : "EN";
+    $("brand").textContent = hero.name;
+
+    // 내비게이션
+    $("nav").innerHTML = ["about", "experience", "skills", "projects", "education", "contact"]
+      .map(function (k) { return '<a href="#' + k + '">' + esc(ui.nav[k]) + "</a>"; }).join("");
+
+    // 히어로
+    $("h-name").textContent = hero.name;
+    $("h-title").textContent = hero.title;
+    $("h-tags").innerHTML = chips(hero.tags);
+    $("h-tagline").textContent = hero.tagline;
+    $("h-loc").textContent = hero.location || "";
+    var actions = "";
+    if (S.email) actions += '<a class="btn primary" href="mailto:' + esc(S.email) + '">' + esc(ui.email) + "</a>";
+    if (S.resume) actions += '<a class="btn" href="' + esc(S.resume) + '" download>' + esc(ui.resume) + "</a>";
+    (S.links || []).forEach(function (l) { actions += '<a class="btn" href="' + esc(l.url) + '" target="_blank" rel="noopener">' + esc(l.label) + "</a>"; });
+    actions += '<button class="btn" type="button" onclick="window.print()">' + esc(ui.print) + "</button>";
+    $("h-actions").innerHTML = actions;
+    var av = $("h-avatar");
+    av.innerHTML = '<div class="avatar" id="initials">' + esc(S.initials || "") + "</div>";
+    if (S.photo) {
+      var img = new Image();
+      img.onload = function () { img.className = "avatar"; img.alt = hero.name; av.innerHTML = ""; av.appendChild(img); };
+      img.src = S.photo;
+    }
+
+    // 소개
+    $("about-h").textContent = about.heading;
+    $("about-text").innerHTML = (about.paragraphs || []).map(function (p) { return "<p>" + esc(p) + "</p>"; }).join("");
+    $("about-stats").innerHTML = (about.highlights || []).map(function (h) {
+      return '<div class="stat"><div class="v">' + esc(h.value) + '</div><div class="l">' + esc(h.label) + "</div></div>"; }).join("");
+    $("about-stats").hidden = !(about.highlights || []).length;
+
+    // 경력
+    $("exp-h").textContent = exp.heading;
+    $("exp-list").innerHTML = (exp.items || []).map(function (j) {
+      return '<div class="job"><div class="when">' + esc(j.start) + " – " + esc(j.end || ui.present) + "</div>" +
+        '<div class="card"><h3>' + esc(j.role) + '</h3><div class="org">' + esc(j.company) +
+        (j.location ? " · " + esc(j.location) : "") + "</div><ul>" +
+        (j.bullets || []).map(function (b) { return "<li>" + esc(b) + "</li>"; }).join("") + "</ul></div></div>";
+    }).join("");
+    $("experience").hidden = !(exp.items || []).length;
+
+    // 역량
+    $("skills-h").textContent = sk.heading;
+    $("skills-groups").innerHTML = (sk.groups || []).map(function (g) {
+      return '<div class="card"><h3>' + esc(g.name) + '</h3><div class="chips">' + chips(g.items) + "</div></div>"; }).join("");
+    $("certs-h").textContent = ui.certs; $("certs").innerHTML = chips(sk.certifications);
+    $("certs-card").hidden = !(sk.certifications || []).length;
+    $("langs-h").textContent = ui.langs;
+    $("langs").innerHTML = (sk.languages || []).map(function (l) {
+      return "<div><span>" + esc(l.name) + "</span><span>" + esc(l.level) + "</span></div>"; }).join("");
+    $("langs-card").hidden = !(sk.languages || []).length;
+
+    // 프로젝트
+    $("proj-h").textContent = pr.heading; $("proj-intro").textContent = pr.intro || "";
+    $("proj-list").innerHTML = (pr.items || []).map(function (p) {
+      var live = /live|운영/i.test(p.status || "");
+      return '<div class="card proj"><div class="head"><h3>' + esc(p.name) + "</h3>" +
+        (p.status ? '<span class="status' + (live ? " live" : "") + '">' + esc(p.status) + "</span>" : "") + "</div>" +
+        "<p>" + esc(p.description) + "</p>" +
+        '<div class="tech">' + (p.tech || []).map(function (t) { return "<span>" + esc(t) + "</span>"; }).join("") + "</div>" +
+        (p.url ? '<a class="more" href="' + esc(p.url) + '">' + esc(ui.visit) + " →</a>" : "") + "</div>";
+    }).join("");
+    $("projects").hidden = !(pr.items || []).length;
+
+    // 학력
+    $("edu-h").textContent = ed.heading;
+    $("edu-list").innerHTML = (ed.items || []).map(function (e) {
+      return '<div class="row"><div><div class="d">' + esc(e.degree) + '</div><div class="s">' + esc(e.school) +
+        '</div></div><div class="y">' + esc(e.year || "") + "</div></div>"; }).join("");
+    $("education").hidden = !(ed.items || []).length;
+
+    // 연락처
+    $("contact-h").textContent = ct.heading; $("contact-text").textContent = ct.text || "";
+    var ca = "";
+    if (S.email) ca += '<a class="btn primary" href="mailto:' + esc(S.email) + '">' + esc(S.email) + "</a>";
+    (S.links || []).forEach(function (l) { ca += '<a class="btn" href="' + esc(l.url) + '" target="_blank" rel="noopener">' + esc(l.label) + "</a>"; });
+    $("contact-actions").innerHTML = ca;
+
+    $("footer").textContent = "© " + new Date().getFullYear() + " " + hero.name + " · " + ui.footer;
+  }
+
+  $("langBtn").onclick = function () {
+    lang = lang === "en" ? "ko" : "en";
+    if (!P[lang]) lang = "en";
+    try { localStorage.setItem("lang", lang); } catch (e) {}
+    render();
+  };
+  render();
+})();
+</script>
+</body>
+</html>
