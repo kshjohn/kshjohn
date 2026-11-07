@@ -22,7 +22,7 @@ if(window.__LOCAL_BUILD&&typeof window.claude==="undefined"&&/^https?:$/.test(lo
         async get(){const r=await fetch(U,{cache:"no-store"});
           if(!r.ok)throw {code:"read"}; const d=await r.json();
           return d&&typeof d==="object"?{exists:true,data:()=>d}:{exists:false,data:()=>null};},
-        async set(d){const r=await fetch(U,{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(d)}); if(!r.ok)throw {code:"write"};},
+        async set(d){const r=await fetch(U,{method:"PUT",keepalive:true,headers:{"content-type":"application/json"},body:JSON.stringify(d)}); if(!r.ok)throw {code:"write"};},
         async delete(){await fetch(U,{method:"DELETE"});}
       };}};
     }
@@ -25935,6 +25935,8 @@ function storageInfo(){
     d:"브라우저 기록·사이트 데이터를 지워도 진도가 남습니다. 파일은 자습실 폴더의 local › data 에 있고, 날짜별 사본을 60일 보관합니다. Claude 뷰어와 주고받을 때는 아래 '백업 코드 만들기'로 코드를 복사해 뷰어의 '코드로 불러오기 → 합치기'에 붙여 넣으세요."};
   if(Cloud.on)             return {tone:"ok",  t:"계정에 자동 저장됩니다."+(Cloud.err?" (동기화 지연)":""),
     d:"이 앱을 껐다 켜도, 다른 기기에서 열어도 진도가 그대로 남습니다. 브라우저에도 한 벌 더 두고 두 곳을 합쳐서 씁니다."};
+  if(window.__LOCAL_BUILD&&location.protocol==="file:") return {tone:"warn",t:"로컬 버전 — 이 브라우저에만 저장됩니다. local › data 에는 파일이 생기지 않습니다.",
+    d:"파일로 남기려면 ① 아래 '진도 파일로 저장'으로 .json 을 내려받아 두거나, ② local/start.command(Mac) · start.bat(Windows) 를 더블클릭해 localhost 로 여세요. 그러면 local/data/progress.json 에 자동 저장됩니다. 주의: file:// 로 열 때와 localhost 로 열 때는 브라우저 저장소가 서로 달라서, 옮길 때 '진도 파일로 저장 → 불러오기'나 백업 코드가 필요합니다."};
   if(window.__LOCAL_BUILD) return {tone:"warn",t:"로컬 버전 — 이 Mac의 브라우저에만 저장됩니다.",
     d:"연습이 끝나면 아래 '백업 코드 만들기'로 코드를 복사해 Claude 뷰어의 '코드로 불러오기 → 합치기'에 붙여 넣으세요. 뷰어에서 공부한 내용을 여기로 가져올 때도 같은 방법을 씁니다."};
   if(Store.mode==="local") return {tone:"ok",  t:"이 브라우저에 자동 저장됩니다.",
@@ -26319,6 +26321,9 @@ function viewHome(){
     <div class="inline" style="margin-top:18px">
       <button class="btn ghost" id="expBtn">백업 코드 만들기</button>
       <button class="btn ghost" id="impBtn">코드로 불러오기</button>
+      ${window.__LOCAL_BUILD?`<button class="btn ghost" id="pfSave">진도 파일로 저장</button>
+      <button class="btn ghost" id="pfLoad">진도 파일 불러오기</button>
+      <input type="file" id="pfFile" accept=".json,application/json" class="hidden">`:""}
       <span style="font-size:12.5px;color:var(--ink-3)">기기를 옮길 때도 이 코드를 씁니다.</span>
     </div>
     <div id="codeBox" class="hidden" style="margin-top:14px"></div>
@@ -26330,8 +26335,38 @@ function viewHome(){
   ${PRON.slice(0,10).map(r=>`<tr><td class="k">${r[0]}</td><td>${r[1]}</td><td>${esc(r[2])}</td></tr>`).join("")}
   </tbody></table></div>`;
 }
+/* ---- 진도 파일 (로컬 버전) ----
+   서버 없이 파일(file://)로 열어도 진도를 .json 으로 내려받고 다시 읽어 올 수 있다.
+   local/serve.py 가 쓰는 local/data/progress.json 과 같은 형식이라 서로 바꿔 쓸 수 있다. */
+function progressFileSave(){
+  const blob=new Blob([JSON.stringify(progressBlob(),null,1)],{type:"application/json"});
+  const a=document.createElement("a"), d=new Date();
+  a.href=URL.createObjectURL(blob);
+  a.download="polski-progress-"+d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")+".json";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+}
+function progressFileRead(file,done){
+  const r=new FileReader();
+  r.onload=()=>{
+    let b=null; try{ b=JSON.parse(String(r.result)); }catch(e){ b=null; }
+    if(!b||typeof b!=="object"||typeof b.known!=="string"||typeof b.seen!=="string")
+      return notify("진도 파일이 아닙니다","'진도 파일로 저장'으로 받은 .json 이나 local/data/progress.json 을 고르세요.");
+    done("P2~"+b64uEnc(JSON.stringify(b)));
+  };
+  r.onerror=()=>notify("파일을 읽지 못했습니다","다시 골라 주세요.");
+  r.readAsText(file);
+}
 function bindHome(){
   const box=$("#codeBox");
+  if($("#pfSave"))$("#pfSave").onclick=progressFileSave;
+  if($("#pfLoad"))$("#pfLoad").onclick=()=>$("#pfFile").click();
+  if($("#pfFile"))$("#pfFile").onchange=e=>{
+    const f=e.target.files&&e.target.files[0]; if(!f)return;
+    progressFileRead(f,code=>{ $("#impBtn").click(); $("#codeIn").value=code;
+      const m=$("#impMsg"); if(m)m.innerHTML="<b>"+esc(f.name)+"</b> 을 읽었습니다. <b>합치기</b>(권장) 또는 <b>덮어쓰기</b>를 누르세요."; });
+    e.target.value="";
+  };
   $("#expBtn").onclick=()=>{
     const code=exportCode();
     box.classList.remove("hidden");

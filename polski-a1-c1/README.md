@@ -10,7 +10,9 @@ Claude 뷰어에서 쓰던 아티팩트와 같은 내용이며, 로컬에서는 
 # 가장 간단히 — 파일을 브라우저로 열기 (Chrome · Edge · Safari)
 open polski-a1-c1/index.html
 
-# 권장 — 로컬 서버로 열기 (마이크·음성 인식이 안정적이고, 진도가 파일로 저장됨)
+# 권장 — 로컬 서버로 열기 (마이크·음성 인식이 안정적이고, 진도가 파일로 자동 저장됨)
+#   Mac: local/start.command 더블클릭   ·   Windows: local/start.bat 더블클릭
+#   또는 터미널에서
 cd polski-a1-c1
 python3 local/serve.py          # http://localhost:8765 가 자동으로 열립니다
 ```
@@ -21,10 +23,15 @@ GitHub Pages 로 배포하면 `https://kshjohn.github.io/polski-a1-c1/` 에서�
 
 | 여는 방법 | 저장 위치 |
 |---|---|
-| `python3 local/serve.py` | 이 Mac 의 파일 `local/data/progress.json` (날짜별 사본 60일 보관). 브라우저 데이터를 지워도 남습니다. |
-| 파일로 열기 / GitHub Pages | 그 브라우저의 localStorage |
+| `local/start.command`(Mac) · `local/start.bat`(Windows) 더블클릭, 또는 `python3 local/serve.py` | 이 Mac 의 파일 `local/data/progress.json` 에 **자동 저장** (날짜별 사본 60일 보관). 브라우저 데이터를 지워도 남습니다. |
+| `index.html` 을 파일로 열기 (file://) / GitHub Pages | 그 브라우저의 localStorage 에만. `local/data` 에는 파일이 생기지 않습니다. |
 
-어느 쪽이든 홈 화면의 **백업 코드 만들기 → 코드로 불러오기(합치기)** 로 Claude 뷰어와 진도를 주고받을 수 있습니다. 합치기는 합집합이라 어느 쪽에서 외웠든 외운 것으로 남습니다.
+홈 화면 **진도 저장** 카드의 버튼:
+- **진도 파일로 저장** — 지금 진도를 `polski-progress-YYYY-MM-DD.json` 으로 내려받습니다. 서버 없이 파일로 열었을 때 쓰세요. `local/data/progress.json` 과 같은 형식입니다.
+- **진도 파일 불러오기** — 그 .json(또는 `local/data/progress.json`)을 골라 **합치기**(합집합, 권장) 또는 **덮어쓰기**.
+- **백업 코드 만들기 → 코드로 불러오기** — 한 줄 코드로 Claude 뷰어와 주고받을 때.
+
+> **주의** — file:// 로 열 때와 localhost 로 열 때는 브라우저 저장소가 서로 다릅니다. 파일로 열어 공부하다가 서버로 바꾸면 진도가 비어 보이는데, 사라진 게 아니라 다른 저장소에 있는 것입니다. 바꾸기 전에 '진도 파일로 저장' 해 두고 새 쪽에서 '불러오기 → 합치기' 하세요.
 
 ## 이번에 추가된 것 (2026-10-17)
 
@@ -55,6 +62,8 @@ polski-a1-c1/
 ├── index.html        # 프로그램 전체 (단일 파일)
 ├── README.md
 └── local/
+    ├── start.command # Mac: 더블클릭으로 서버 실행
+    ├── start.bat     # Windows: 더블클릭으로 서버 실행
     ├── serve.py      # 로컬 서버 + 진도 파일 저장 (표준 라이브러리만 사용)
     └── data/         # 진도 파일 (git 에 올리지 않음)
 ```
