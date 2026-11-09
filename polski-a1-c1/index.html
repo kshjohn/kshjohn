@@ -25517,6 +25517,73 @@ function atTimePl(h,m){
 const dateToPl=(d,mo)=>`${ORD_M_GEN[d]} ${MONTHS[mo-1][1]}`;
 const dateKo=(d,mo)=>`${mo}월 ${d}일`;
 
+/* ---- 서수 1 ~ 1 000 000 — 표가 아니라 규칙으로 만든다 ----
+   핵심 규칙: 끝의 두 자리(몇십·몇)만 서수가 되고, 그 앞의 백·천 자리는 기수 그대로 둔다.
+     125 → sto dwudziesty piąty · 1985 → tysiąc dziewięćset osiemdziesiąty piąty
+   끝이 백으로 딱 떨어지면 백 자리가, 천으로 떨어지면 천 자리가 서수가 된다.
+     1500 → tysiąc pięćsetny · 2000 → dwutysięczny (한 단어) · 1 000 000 → milionowy
+   격이 바뀔 때도 서수 부분만 변하고 기수 부분은 그대로다: w roku tysiąc dziewięćset osiemdziesiątym piątym */
+const O_ONES=["","pierwszy","drugi","trzeci","czwarty","piąty","szósty","siódmy","ósmy","dziewiąty"];
+const O_TEENS=["dziesiąty","jedenasty","dwunasty","trzynasty","czternasty","piętnasty","szesnasty",
+  "siedemnasty","osiemnasty","dziewiętnasty"];
+const O_TENS=["","dziesiąty","dwudziesty","trzydziesty","czterdziesty","pięćdziesiąty","sześćdziesiąty",
+  "siedemdziesiąty","osiemdziesiąty","dziewięćdziesiąty"];
+const O_HUND=["","setny","dwusetny","trzechsetny","czterechsetny","pięćsetny","sześćsetny","siedemsetny",
+  "osiemsetny","dziewięćsetny"];
+/* 천 단위 서수는 앞의 수를 결합형으로 붙여 한 단어로 쓴다: dwutysięczny, pięciotysięczny, stutysięczny */
+const O_PRE1=["","","dwu","trzy","cztero","pięcio","sześcio","siedmio","ośmio","dziewięcio"];
+const O_PRE_TEEN=["dziesięcio","jedenasto","dwunasto","trzynasto","czternasto","piętnasto","szesnasto",
+  "siedemnasto","osiemnasto","dziewiętnasto"];
+const O_PRE_TENS=["","","dwudziesto","trzydziesto","czterdziesto","pięćdziesięcio","sześćdziesięcio",
+  "siedemdziesięcio","osiemdziesięcio","dziewięćdziesięcio"];
+const O_PRE_HUND=["","stu","dwustu","trzystu","czterystu","pięćset","sześćset","siedemset","osiemset","dziewięćset"];
+/* 천 앞머리. 21 000번째처럼 실제로 거의 쓰지 않고 표기도 흔들리는 꼴은 만들지 않는다(null). */
+function thousPrefix(c){
+  if(c===1)return "";
+  if(c<10)return O_PRE1[c];
+  if(c<20)return O_PRE_TEEN[c-10];
+  if(c<100){const t=Math.floor(c/10),o=c%10; if(o===1)return null; return O_PRE_TENS[t]+(o?O_PRE1[o]:"");}
+  if(c%100===0)return O_PRE_HUND[c/100];
+  return null;
+}
+/* {pre: 기수로 남는 앞부분, w: 서수가 되는 낱말들} */
+function ordParts(n){
+  if(!Number.isInteger(n)||n<1||n>1e6)return null;
+  if(n===1e6)return {pre:"",w:["milionowy"]};
+  const r2=n%100;
+  if(r2){
+    const t=Math.floor(r2/10), o=r2%10;
+    const w=r2<10?[O_ONES[r2]]:r2<20?[O_TEENS[r2-10]]:[O_TENS[t]].concat(o?[O_ONES[o]]:[]);
+    return {pre:n-r2?numToPl(n-r2):"",w};
+  }
+  const r3=n%1000;
+  if(r3)return {pre:n-r3?numToPl(n-r3):"",w:[O_HUND[r3/100]]};
+  const p=thousPrefix(n/1000);
+  return p==null?null:{pre:"",w:[p+"tysięczny"]};
+}
+/* 서수 한 낱말의 격·성 변화. 형용사와 똑같다.
+   m 남성 주격 · g 남성·중성 속격 · l 남성·중성 전치격·조격 · f 여성 주격
+   fg 여성 속격·여격·전치격 · fa 여성 대격·조격 · n 중성 주격·대격 */
+function ordWord(w,k){
+  const soft=/i$/.test(w), st=w.slice(0,-1);          /* drugi·trzeci 는 -i, 나머지는 -y */
+  const velar=/[gk]i$/.test(w);                         /* drugi → druga, trzeci → trzecia */
+  switch(k){
+    case "g":  return (soft?w:st)+"ego";
+    case "l":  return soft?w+"m":st+"ym";
+    case "f":  return soft?(velar?st+"a":w+"a"):st+"a";
+    case "fg": return (soft?w:st)+"ej";
+    case "fa": return soft?(velar?st+"ą":w+"ą"):st+"ą";
+    case "n":  return (soft?w:st)+"e";
+    default:   return w;
+  }
+}
+function ordForm(n,k){
+  const p=ordParts(n); if(!p)return null;
+  return (p.pre?p.pre+" ":"")+p.w.map(w=>ordWord(w,k||"m")).join(" ");
+}
+const ORD_K={m:"남성 주격",g:"남성·중성 속격",l:"남성·중성 전치격·조격",f:"여성 주격",
+  fg:"여성 속격·여격·전치격",fa:"여성 대격·조격",n:"중성 주격·대격"};
+
 /* 숫자 뒤 명사가 어떤 형태가 되는가 — A1에서 가장 자주 틀리는 규칙 */
 function numAgree(n){
   if(n===1)return "sg";
@@ -25553,6 +25620,33 @@ function nounOpts(d,ans){
 let _numNouns=null;
 const NUM_NOUNS=()=>_numNouns||(_numNouns=DECL_ALL.filter(d=>d.pl&&d.t!=="m-pers"));
 const DRILLNUMS=[1,2,3,4,5,6,7,8,9,11,12,13,14,15,20,21,22,23,24,25,30,31,32,40,50,100,101,102,105,1000,1002,1005,2000];
+/* 숫자 + 명사 문제에서 일부러 많이 내는 '함정' 수.
+   끝자리는 2·3·4인데 속격 복수인 12·13·14 (112·1013 …), 끝자리 1인데 단수가 아닌 21·31·101,
+   그리고 그 짝이 되는 2·3·4 · 22·23·24 · 102 … */
+const AGREE_TRAP={
+  sg:[1],
+  nomPl:[2,3,4,22,23,24,32,33,34,42,43,44,52,62,73,84,92,102,103,104,122,123,124,202,1002,1003,1004,2022],
+  genPl:[5,7,11,12,13,14,15,20,21,25,31,41,51,100,101,111,112,113,114,212,213,1000,1001,1012,1013,2000,5000,10014]
+};
+const agreeWhy=n=>{
+  const l2=n%100, l1=n%10;
+  if(n===1)return "1만 주격 단수";
+  if(l2>=12&&l2<=14)return `끝 두 자리 ${l2} — 12·13·14는 끝자리가 2·3·4여도 속격 복수`;
+  if(l1>=2&&l1<=4)return `끝자리 ${l1} — 2·3·4로 끝나면 주격 복수 (12·13·14 제외)`;
+  if(l1===1)return `끝자리 1이지만 1 자체가 아니면 속격 복수 (21, 101 …)`;
+  return `끝자리 ${l1} — 0·5–9로 끝나면 속격 복수`;
+};
+/* 단수 주격·복수 주격·복수 속격이 셋 다 다른 명사만 쓴다 — 그래야 세 꼴이 모두 보기로 선다 */
+let _numNouns3=null;
+const NUM_NOUNS3=()=>_numNouns3||(_numNouns3=(()=>{
+  const a=NUM_NOUNS().filter(d=>new Set([norm(d.sg[0]),norm(d.pl[0]),norm(d.pl[1])]).size===3);
+  return a.length>20?a:NUM_NOUNS();})());
+/* 1·2 의 성 함정: jeden ↔ jedna ↔ jedno, dwa ↔ dwie */
+function numWordWrong(n,g){
+  if(n===1)return g==="f"?"jeden":"jedna";
+  if(n%10===2&&n%100!==12)return numToPl(n).replace(/dwa$/,g==="f"?"dwa":"dwie");
+  return null;
+}
 
 const NMAX=999999999999;
 const NRANGES=[
@@ -25647,7 +25741,7 @@ const defState=()=>({known:{},seen:{},lessons:{},quiz:[],streak:0,last:"",pracOn
   spkDone:{},wrtDone:{},wrtText:{},fexams:[],
   caseStats:{1:[0,0],2:[0,0],3:[0,0],4:[0,0],5:[0,0],6:[0,0],7:[0,0]},
   genStats:[0,0], genBest:0,
-  numStats:{read:[0,0],noun:[0,0],clock:[0,0],date:[0,0]},
+  numStats:{read:[0,0],noun:[0,0],clock:[0,0],date:[0,0],ord:[0,0]},
   odmStats:{verb:[0,0],adj:[0,0],part:[0,0]},
   wtStats:{dict:[0,0],plw:[0,0],kow:[0,0],five:[0,0]},
   exams:[],
@@ -25692,7 +25786,7 @@ for(let i=1;i<=7;i++) if(!Array.isArray(S.caseStats[i]))S.caseStats[i]=[0,0];
 if(!Array.isArray(S.genStats))S.genStats=[0,0];
 if(typeof S.genBest!=="number")S.genBest=0;
 if(!S.numStats)S.numStats=defState().numStats;
-["read","noun","clock","date"].forEach(k=>{if(!Array.isArray(S.numStats[k]))S.numStats[k]=[0,0];});
+["read","noun","clock","date","ord"].forEach(k=>{if(!Array.isArray(S.numStats[k]))S.numStats[k]=[0,0];});
 if(!S.odmStats)S.odmStats=defState().odmStats;
 ["verb","adj","part"].forEach(k=>{if(!Array.isArray(S.odmStats[k]))S.odmStats[k]=[0,0];});
 if(!S.wtStats)S.wtStats=defState().wtStats;
@@ -25723,7 +25817,7 @@ function save(){
    단어 296개와 레슨 13개는 켜짐/꺼짐 비트열로 접어서 6비트씩 문자 하나에 담는다.
    296비트 → 50자. 통계까지 합쳐도 한 줄에 들어가 주소나 메모장에 넣기 좋다. */
 const B64="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-const NUMKEYS=["read","noun","clock","date"];
+const NUMKEYS=["read","noun","clock","date","ord"];
 const ODMKEYS=["verb","adj","part"];
 const WTKEYS=["dict","plw","kow","five"];
 function bitsToStr(b){let o="";for(let i=0;i<b.length;i+=6)o+=B64[parseInt(b.slice(i,i+6).padEnd(6,"0"),2)];return o;}
@@ -28966,7 +29060,8 @@ function odmDrill(v){
    ======================================================================= */
 const NMODES=[
   {id:"read", t:"숫자 읽기",     d:"0부터 10억까지. 범위를 골라 연습하고, 15와 50처럼 헷갈리는 짝이 보기로 나옵니다."},
-  {id:"noun", t:"숫자 + 명사",   d:"수에 따라 명사 격이 바뀌는 규칙. A1에서 가장 자주 틀리는 지점입니다."},
+  {id:"noun", t:"숫자 + 명사",   d:"주격 단수 · 주격 복수 · 속격 복수가 모두 보기로 나옵니다. 12–14 · 21 · 22–24 같은 함정 수 위주, 거꾸로 수를 고르는 문제도."},
+  {id:"ord",  t:"서수",          d:"1번째부터 100만 번째까지. 문장 빈칸에 맞는 격·성으로 — 층·순위·연도·세기·시각·날짜."},
   {id:"clock",t:"시계 읽기",     d:"아날로그 시계를 보고 Która godzina? 에 답하기."},
   {id:"date", t:"날짜와 요일",   d:"며칠·몇 월·무슨 요일. 날짜는 속격 서수를 씁니다."}
 ];
@@ -28982,7 +29077,7 @@ function viewNum(v){
       <td class="mono" style="color:var(--ink-3)">${n}회</td></tr>`;}).join("");
 
   v.innerHTML=`<h2 class="sec">숫자 · 날짜 · 시간</h2>
-  <p class="lede">폴란드어에서 숫자는 단순한 어휘가 아니라 <b>문법</b>입니다. 수에 따라 뒤에 오는 명사의 격이 바뀌고, 시간은 여성 서수로, 날짜는 남성 속격 서수로 말합니다. 아래 네 가지 연습은 모두 무한히 생성됩니다.</p>
+  <p class="lede">폴란드어에서 숫자는 단순한 어휘가 아니라 <b>문법</b>입니다. 수에 따라 뒤에 오는 명사의 격이 바뀌고, 시간은 여성 서수로, 날짜는 남성 속격 서수로 말합니다. 아래 다섯 가지 연습은 모두 무한히 생성됩니다.</p>
   <div class="grid g2">
     ${NMODES.map(m=>`<button class="qtype" data-nm="${m.id}"><b>${m.t}</b><small>${m.d}</small></button>`).join("")}
   </div>
@@ -29019,6 +29114,53 @@ function viewNum(v){
     <td class="pl" style="font-weight:600">${numToPl(c*1e9)}</td></tr>`).join("")}
   </tbody></table></div>
   <p class="lede" style="margin-top:14px">1 000은 <span class="pl" style="font-weight:600">tysiąc</span>이지 <span style="text-decoration:line-through">jeden tysiąc</span>이 아닙니다. 100만·10억도 마찬가지로 앞에 jeden을 붙이지 않습니다.</p>
+
+  <h2 class="sec">서수 — 1번째부터 1000번째까지</h2>
+  <p class="lede">서수(첫째, 둘째 …)는 <b>형용사</b>입니다. 기본형은 남성 주격 <b>-y / -i</b>이고, 뒤에 오는 명사의 성·격에 맞춰 형용사처럼 변합니다. 폴란드어로 쓸 때는 숫자 뒤에 점을 찍습니다: <span class="mono">3.</span> = <span class="pl">trzeci</span>.</p>
+  <div class="card scroll-x"><table class="tb"><thead><tr><th>숫자</th><th>서수</th><th>숫자</th><th>서수</th></tr></thead><tbody>
+  ${Array.from({length:10},(_,i)=>`<tr>
+    <td class="k mono">${i+1}.</td><td class="pl" style="font-weight:600">${ordForm(i+1)}</td>
+    <td class="k mono">${i+11}.</td><td class="pl" style="font-weight:600">${ordForm(i+11)}</td></tr>`).join("")}
+  ${Array.from({length:10},(_,i)=>`<tr>
+    <td class="k mono">${i<7?((i+3)*10)+".":""}</td><td class="pl" style="font-weight:600">${i<7?ordForm((i+3)*10):""}</td>
+    <td class="k mono">${(i+1)*100}.</td><td class="pl" style="font-weight:600">${ordForm((i+1)*100)}</td></tr>`).join("")}
+  </tbody></table></div>
+  <p class="lede" style="margin-top:14px"><b>불규칙은 1–4와 7·8뿐</b> — <span class="pl" style="font-weight:600">pierwszy, drugi, trzeci, czwarty</span>, 그리고 모음이 바뀌는 <span class="pl" style="font-weight:600">siódmy</span>(siedem), <span class="pl" style="font-weight:600">ósmy</span>(osiem). 나머지는 기수에서 끝을 바꾸면 됩니다.
+  백 단위는 <span class="pl" style="font-weight:600">-setny</span>: 200은 <span class="pl">dwu</span>setny, 300·400은 <span class="pl">trzech</span>setny·<span class="pl">czterech</span>setny로 앞부분이 속격 꼴이 됩니다.</p>
+
+  <h2 class="sec">큰 서수 — 천 · 만 · 백만 번째</h2>
+  <p class="lede">천으로 떨어지는 서수는 앞의 수를 결합형으로 바꿔 <b>한 낱말로 붙여</b> 씁니다. <span class="pl">dwa tysiące</span> → <span class="pl" style="font-weight:600">dwutysięczny</span>.</p>
+  <div class="card scroll-x"><table class="tb"><thead><tr><th>숫자</th><th>서수</th><th>기수 (비교)</th></tr></thead><tbody>
+  ${[1000,2000,3000,4000,5000,10000,20000,25000,50000,100000,200000,300000,500000,1000000].map(n=>`<tr>
+    <td class="k mono">${fmtNum(n)}.</td>
+    <td class="pl" style="font-weight:600;color:var(--c3)">${ordForm(n)} <button class="spk" data-say="${esc(ordForm(n))}">🔊</button></td>
+    <td class="pl" style="color:var(--ink-3)">${numToPl(n)}</td></tr>`).join("")}
+  </tbody></table></div>
+
+  <h2 class="sec">합성 서수 — 끝 두 자리만 서수</h2>
+  <p class="lede">여러 낱말로 된 서수는 <b>끝의 몇십·몇만 서수</b>로 바꾸고 앞의 백·천은 <b>기수 그대로</b> 둡니다. 격이 바뀔 때도 색칠된 서수 부분만 변합니다. 한국인 학습자가 가장 많이 하는 실수는 앞부분까지 서수로 바꾸는 것입니다 (<span style="text-decoration:line-through">setny dwudziesty piąty</span>).</p>
+  <div class="card scroll-x"><table class="tb"><thead><tr><th>숫자</th><th>서수 (남성 주격)</th><th>w … roku (전치격)</th></tr></thead><tbody>
+  ${[21,101,125,250,999,1001,1500,1985,2000,2026,10500,999999].map(n=>{const p=ordParts(n);
+    const col=k=>`${p.pre?esc(p.pre)+" ":""}<b style="color:var(--c3)">${esc(p.w.map(w=>ordWord(w,k)).join(" "))}</b>`;
+    return `<tr><td class="k mono">${fmtNum(n)}.</td>
+    <td class="pl" style="font-size:15px">${col("m")} <button class="spk" data-say="${esc(ordForm(n))}">🔊</button></td>
+    <td class="pl" style="font-size:15px;color:var(--ink-2)">${col("l")}</td></tr>`;}).join("")}
+  </tbody></table></div>
+  <p class="lede" style="margin-top:14px"><b>연도</b> — <span class="pl">Mamy rok <b>dwa tysiące dwudziesty szósty</b>.</span> 2026년이다 ·
+  <span class="pl">Urodziłem się w <b>tysiąc dziewięćset osiemdziesiątym piątym</b> roku.</span> 1985년에 태어났다.
+  일상에서는 <span class="pl">w osiemdziesiątym piątym</span>처럼 앞부분을 빼고 말하기도 합니다.</p>
+
+  <h2 class="sec">서수의 격과 성</h2>
+  <p class="lede">서수는 형용사와 똑같이 변합니다. 날짜는 <b>속격</b>, "~년에·~층에"는 <b>전치격</b>, 시각은 godzina 를 받아 <b>여성</b>입니다.</p>
+  <div class="card scroll-x"><table class="tb"><thead><tr><th>형태</th><th>쓰임</th><th>3</th><th>22</th><th>2026</th></tr></thead><tbody>
+  ${[["m","Mamy rok … · … dzień"],["g","… maja (날짜) · od … roku"],["l","w … roku · na … piętrze · … klientem"],
+     ["f","… wizyta · … godzina"],["fg","o … (시각) · do … (strony)"],["fa","… rocznicę · na … stronę"],["n","… miejsce · … piętro"]]
+    .map(([k,u])=>`<tr><td class="k" style="font-family:var(--font-ui);font-size:12.5px">${ORD_K[k]}</td>
+      <td class="pl" style="font-size:13px;color:var(--ink-3)">${esc(u)}</td>
+      ${[3,22,2026].map(n=>`<td class="pl" style="font-weight:600">${esc(ordForm(n,k))}</td>`).join("")}</tr>`).join("")}
+  </tbody></table></div>
+  <div class="inline" style="margin-top:14px"><button class="btn red" data-nm="ord">서수 연습 →</button>
+    <span style="font-size:13px;color:var(--ink-3)">문장 빈칸에 맞는 격·성을 고릅니다. 보기에 다른 격, 기수, 앞부분까지 서수로 바꾼 꼴이 섞여 나옵니다.</span></div>
 
   <h2 class="sec">한국어 단위와 맞춰 보기</h2>
   <p class="lede">한국어는 <b>만(10⁴)</b> 단위로 끊고 폴란드어는 <b>천(10³)</b> 단위로 끊습니다. 자릿수를 옮겨 세야 해서 한국인 학습자가 가장 헤매는 지점입니다.</p>
@@ -29080,8 +29222,8 @@ function viewNum(v){
   <b>날짜 = 속격 서수 + 속격 월.</b> <span class="pl" style="font-weight:600">${dateToPl(15,3)}</span> = 3월 15일.<br>
   오늘이 며칠인지 말할 때는 주격 서수를 씁니다: <span class="pl">Dziś jest ${ORD_M[15]} ${MONTHS[2][1]}.</span></p>
 
-  <h2 class="sec">서수 1–31</h2>
-  <p class="lede">날짜에 쓰는 남성 서수입니다. 왼쪽이 기본형, 오른쪽이 날짜에 실제로 쓰는 속격입니다.</p>
+  <h2 class="sec">날짜용 서수 1–31</h2>
+  <p class="lede">날짜에 쓰는 남성 서수입니다. 왼쪽이 기본형, 오른쪽이 날짜에 실제로 쓰는 속격입니다. 1000번째·100만 번째까지는 위의 <b>서수</b> 표를 보세요.</p>
   <div class="card scroll-x"><table class="tb"><thead><tr>
     <th>일</th><th>서수</th><th>속격 (날짜)</th><th>일</th><th>서수</th><th>속격 (날짜)</th></tr></thead><tbody>
   ${Array.from({length:16},(_,i)=>i+1).map(i=>`<tr>
@@ -29093,7 +29235,117 @@ function viewNum(v){
   </tbody></table></div>`;
 
   v.querySelectorAll("[data-nm]").forEach(b=>b.onclick=()=>{
-    nState={mode:b.dataset.nm,cur:null,answered:false,run:[0,0]}; render(); window.scrollTo(0,0);});
+    nState={mode:b.dataset.nm,cur:null,answered:false,run:[0,0],range:nState.range,orange:nState.orange}; render(); window.scrollTo(0,0);});
+}
+
+const pickA=a=>a[Math.floor(Math.random()*a.length)];
+/* ---- 숫자 + 명사 ----
+   문제에 격 이름을 적어 주지 않는다. 보기는 언제나 같은 수에 주격 단수 · 주격 복수 · 속격 복수를 붙인 세 꼴과,
+   1·2 의 성(jeden/jedna, dwa/dwie)을 틀린 꼴로 채운다. 셋에 하나는 거꾸로 — 명사 꼴을 보고 수를 고른다. */
+function makeNounQ(){
+  const d=pickA(NUM_NOUNS3()), ko=d.ko.replace(/ \(.*\)/,"").split(/[;,]/)[0].trim();
+  const cat=Math.random()<.15?"sg":Math.random()<.5?"nomPl":"genPl";
+  const formOfCat=c=>c==="sg"?d.sg[0]:c==="nomPl"?d.pl[0]:d.pl[1];
+  if(Math.random()<.35){
+    /* 거꾸로: ___ koty → 어느 수? */
+    const n=pickA(AGREE_TRAP[cat]), F=formOfCat(cat), l1=n%10;
+    const other=["sg","nomPl","genPl"].filter(c=>c!==cat).flatMap(c=>AGREE_TRAP[c]);
+    /* 끝자리가 같은 수(3 ↔ 13 ↔ 23)를 먼저 — 가장 헷갈리는 짝 */
+    const pool=shuffle(other.filter(x=>x%10===l1)).concat(shuffle(other.filter(x=>x%10!==l1)));
+    const opts=[]; for(const x of pool){ if(opts.length>=3)break; if(!opts.includes(x))opts.push(x); }
+    const full=`${numWord(n,d.g)} ${F}`;
+    return {stem:"빈칸에 들어갈 수 있는 수는?",
+      big:`___ <span class="pl">${esc(F)}</span> <span style="font-size:15px;color:var(--ink-3);font-weight:500">(${esc(ko)})</span>`,
+      ans:fmtNum(n), opts:shuffle([n,...opts]).map(fmtNum), say:full,
+      note:`${fmtNum(n)} ${F} = ${full} — ${AGREE_KO[cat]} · ${agreeWhy(n)}`};
+  }
+  const n=Math.random()<.75?pickA(AGREE_TRAP[cat]):pickA(DRILLNUMS);
+  const a=numAgree(n), nw=numWord(n,d.g), ans=`${nw} ${agreeForm(d,n)}`;
+  const seen=new Set([norm(ans)]), traps=[];
+  const add=s=>{ if(s&&!seen.has(norm(s))){seen.add(norm(s));traps.push(s);} };
+  ["sg","nomPl","genPl"].filter(c=>c!==a).forEach(c=>add(`${nw} ${formOfCat(c)}`));   /* 격 함정 둘 */
+  const ww=numWordWrong(n,d.g);
+  if(ww)add(`${ww} ${agreeForm(d,n)}`);                                                  /* 성 함정 */
+  add(`${nw} ${d.sg[1]}`);                                                               /* 단수 속격 */
+  d.pl.forEach(f=>add(`${nw} ${f}`));
+  const gNote=ww?` · ${d.g==="f"?"여성 명사라":"남성·중성 명사라"} ${ww.split(" ").pop()}가 아니라 ${nw.split(" ").pop()}`:"";
+  return {stem:"수와 명사를 바르게 묶은 것은?",
+    big:`<span class="mono">${fmtNum(n)}</span> × <span class="pl">${esc(d.p)}</span> <span style="font-size:15px;color:var(--ink-3);font-weight:500">(${esc(ko)})</span>`,
+    ans, opts:shuffle([ans,...traps.slice(0,3)]), say:ans,
+    note:`${ans} — ${AGREE_KO[a]} · ${agreeWhy(n)}${gNote}`};
+}
+
+/* ---- 서수 ----
+   문장 속 빈칸에 맞는 격·성으로 서수를 넣는다. 보기는 같은 수의 다른 격·성 꼴, 기수,
+   그리고 '앞부분까지 서수로 바꾼' 꼴(setny dwudziesty piąty)·'끝 낱말만 바꾼' 꼴(dwudziesty drugiego) 같은 구조 함정. */
+const ORANGES=[
+  {id:"os",t:"1–100",            max:100},
+  {id:"ok",t:"~1만 · 연도 포함",  max:10000},
+  {id:"om",t:"~100만",           max:1000000}
+];
+const ORD_CTX=[
+  {k:"m", pl:"To jest mój ___ dzień w nowej pracy.", ko:"새 직장에서 오늘이 {n}번째 날이다.", lo:1, hi:400},
+  {k:"m", pl:"Dziś jest ___ dzień roku.",            ko:"오늘은 올해 {n}번째 날이다.", lo:1, hi:365},
+  {k:"l", pl:"Mieszkam na ___ piętrze.",            ko:"나는 유럽식 {n}층(한국식 {n1}층)에 산다.", lo:1, hi:40},
+  {k:"f", pl:"To moja ___ wizyta w Polsce.",         ko:"이번이 내 {n}번째 폴란드 방문이다.", lo:1, hi:30},
+  {k:"fa",pl:"Firma obchodzi ___ rocznicę.",         ko:"회사가 창립 {n}주년을 맞는다.", lo:1, hi:200},
+  {k:"n", pl:"Nasza drużyna zajęła ___ miejsce.",    ko:"우리 팀이 {n}위를 했다.", lo:1, hi:1000},
+  {k:"l", pl:"Ten film jest na ___ miejscu.",        ko:"이 영화는 {n}위에 올라 있다.", lo:1, hi:1000},
+  {k:"l", pl:"Jest pan naszym ___ klientem!",        ko:"손님은 저희의 {n}번째 고객이십니다!", lo:100, hi:1e6, round:true},
+  {k:"l", pl:"To było w ___ wieku.",                 ko:"그건 {n}세기의 일이었다.", lo:1, hi:21},
+  {k:"fg",pl:"Spotkajmy się o ___.",                 ko:"{n}시에 만나자. (24시간제)", lo:1, hi:24},
+  {k:"g", pl:"Urodziłam się ___ maja.",              ko:"나는 5월 {n}일에 태어났다.", lo:1, hi:31},
+  {k:"m", pl:"Mamy rok ___.",                        ko:"올해는 {n}년이다.", year:true},
+  {k:"l", pl:"Urodziłem się w ___ roku.",            ko:"나는 {n}년에 태어났다.", year:true},
+  {k:"g", pl:"Pracuję tu od ___ roku.",              ko:"나는 {n}년부터 여기서 일한다.", year:true},
+  {k:"m", pl:"___",                                  ko:"{n}번째 — 남성 주격 기본형", lo:1, hi:1e6, bare:true}
+];
+const ORD_ROUND=[100,200,300,400,500,1000,2000,3000,4000,5000,10000,20000,25000,50000,100000,200000,500000,1000000];
+const ORD_SMALL=[1,2,3,4,11,12,13,14,20,21,22,23,24,30,31,99,100,101,102,111,125,200,300];
+const ORD_YEARS=[1900,1918,1939,1945,1968,1980,1985,1989,1990,1999,2000,2001,2004,2010,2012,2015,2020,2021,2022,2024,2025,2026,2030];
+function ordPick(c,max){
+  if(c.year)return Math.random()<.7?pickA(ORD_YEARS):1900+Math.floor(Math.random()*131);
+  const hi=Math.min(c.hi,max);
+  for(let i=0;i<30;i++){
+    let n;
+    const rp=ORD_ROUND.filter(x=>x>=c.lo&&x<=hi), sp=ORD_SMALL.filter(x=>x>=c.lo&&x<=hi);
+    if((c.round||(hi>1000&&Math.random()<.45))&&rp.length)n=pickA(rp);
+    else if(Math.random()<.4&&sp.length)n=pickA(sp);
+    else n=c.lo+Math.floor(Math.random()*(hi-c.lo+1));
+    if(ordParts(n))return n;
+  }
+  return c.lo;
+}
+const ORD_CONF={m:["g","l","n","f"],g:["m","l","fg","n"],l:["m","g","fg","n"],
+  f:["fa","fg","m","n"],fa:["f","fg","m","n"],fg:["f","fa","g","m"],n:["m","l","f","g"]};
+function makeOrdQ(max){
+  const ctxs=ORD_CTX.filter(c=>c.year?max>=10000:c.lo<=max);
+  const c=pickA(ctxs), n=ordPick(c,max), k=c.k, ans=ordForm(n,k), p=ordParts(n);
+  const seen=new Set([norm(ans)]), caseT=[], structT=[];
+  const addTo=(arr,s)=>{ if(s&&!seen.has(norm(s))){seen.add(norm(s));arr.push(s);} };
+  ORD_CONF[k].forEach(x=>addTo(caseT,ordForm(n,x)));
+  /* 앞의 기수 부분까지 서수로 바꾼 꼴 — 1985 → tysiąc dziewięćsetny osiemdziesiąty piąty */
+  const r2=n%100;
+  if(p.pre&&r2&&ordParts(n-r2)){
+    const tail=ordParts(r2).w.map(w=>ordWord(w,k)).join(" ");
+    addTo(structT,ordForm(n-r2,k)+" "+tail);
+  }
+  /* 끝 낱말만 격을 바꾼 꼴 — dwudziesty drugiego */
+  if(p.w.length>1&&k!=="m")addTo(structT,(p.pre?p.pre+" ":"")+p.w[0]+" "+ordWord(p.w[1],k));
+  addTo(structT,numToPl(n));                                  /* 기수 */
+  const traps=[caseT[0],caseT[1],pickA(structT)].filter(Boolean);
+  caseT.slice(2).concat(structT).forEach(s=>{ if(traps.length<3&&!traps.includes(s))traps.push(s); });
+  const koS=c.ko.replace("{n}",fmtNum(n)).replace("{n1}",fmtNum(n+1));
+  const filled=c.bare?ans:c.pl.replace("___",ans);
+  const [b4,af]=c.bare?["",""]:c.pl.split("___");
+  const rule=p.pre?` · 앞의 '${p.pre}'는 기수 그대로, 끝부분만 서수`:
+    (/tysięczny$/.test(p.w[0])&&n>1000?" · 천 단위 서수는 한 낱말로 붙여 쓴다":"");
+  return {stem:c.bare?"이 서수를 폴란드어로? (남성 주격)":"빈칸에 맞는 서수는?",
+    big:c.bare?`<span class="mono">${fmtNum(n)}.</span> <span style="font-size:15px;color:var(--ink-3);font-weight:500">(${esc(koS)})</span>`
+      :`<span class="pl">${esc(b4)}<span style="border-bottom:2px solid var(--c3);padding:0 18px"></span>${esc(af)}</span>
+        <div style="font-size:15px;color:var(--ink-3);font-weight:500;margin-top:8px;letter-spacing:-.01em">${esc(koS)}</div>`,
+    ans, opts:shuffle([ans,...traps.slice(0,3)]), say:filled,
+    note:`${filled} — ${ORD_K[k]}${rule}`};
 }
 
 /* 모드별 문항 생성 */
@@ -29104,16 +29356,8 @@ function makeNumQ(mode,max){
       ans:numToPl(n), opts:shuffle([numToPl(n),...numDistract(n,3).map(numToPl)]),
       say:numToPl(n), note:`${fmtNum(n)} = ${numToPl(n)}`};
   }
-  if(mode==="noun"){
-    const P=NUM_NOUNS(); const d=P[Math.floor(Math.random()*P.length)];
-    const n=DRILLNUMS[Math.floor(Math.random()*DRILLNUMS.length)];
-    const ans=agreeForm(d,n), a=numAgree(n);
-    const full=`${numWord(n,d.g)} ${ans}`;
-    return {stem:`${numWord(n,d.g)} 뒤에 오는 형태는? — ${AGREE_KO[a]}`,
-      big:`<span class="mono">${n}</span> × <span class="pl">${esc(d.p)}</span>`,
-      ans, opts:nounOpts(d,ans), say:full,
-      note:`${full} — ${n}${d.ko.replace(/ \(.*\)/,"")} · 끝자리 규칙에 따라 ${AGREE_KO[a]}`};
-  }
+  if(mode==="noun")return makeNounQ();
+  if(mode==="ord")return makeOrdQ(max||1000);
   if(mode==="clock"){
     const h=1+Math.floor(Math.random()*12);
     const mins=[0,0,5,10,15,15,20,30,30,40,45,45,50];
@@ -29149,7 +29393,8 @@ function makeNumQ(mode,max){
 }
 
 function numDrill(v){
-  const rng=NRANGES.find(r=>r.id===nState.range)||NRANGES[1];
+  const isOrd=nState.mode==="ord", RR=isOrd?ORANGES:NRANGES, rk=isOrd?"orange":"range";
+  const rng=RR.find(r=>r.id===nState[rk])||RR[1];
   if(!nState.cur){nState.cur=makeNumQ(nState.mode,rng.max);nState.answered=false;}
   const q=nState.cur, mode=NMODES.find(m=>m.id===nState.mode);
   const acc=nState.run[1]?Math.round(nState.run[0]/nState.run[1]*100):0;
@@ -29157,13 +29402,13 @@ function numDrill(v){
   <div class="inline" style="margin:22px 0 14px"><button class="icon-btn" id="nback">← 숫자·시간</button>
     <b style="font-size:15px">${mode.t}</b>
     <span class="mono" style="margin-left:auto;font-size:13px;color:var(--ink-3)">${nState.run[0]} / ${nState.run[1]} · ${acc}%</span></div>
-  ${nState.mode==="read"?`<div class="card pad" style="margin-bottom:14px">
+  ${nState.mode==="read"||isOrd?`<div class="card pad" style="margin-bottom:14px">
     <div class="eyebrow" style="margin-bottom:10px">숫자 범위</div>
-    <div class="preps" style="gap:8px">${NRANGES.map(r=>`<span data-nr="${r.id}" role="button" tabindex="0"
+    <div class="preps" style="gap:8px">${RR.map(r=>`<span data-nr="${r.id}" role="button" tabindex="0"
       style="cursor:pointer;--cc:var(--c3);font-family:var(--font-ui);font-size:13.5px;
-      border-color:${nState.range===r.id?"var(--c3)":"var(--line)"};
-      background:${nState.range===r.id?"color-mix(in srgb,var(--c3) 12%,transparent)":"transparent"};
-      color:${nState.range===r.id?"var(--c3)":"var(--ink-3)"}">${r.t}</span>`).join("")}</div>
+      border-color:${rng.id===r.id?"var(--c3)":"var(--line)"};
+      background:${rng.id===r.id?"color-mix(in srgb,var(--c3) 12%,transparent)":"transparent"};
+      color:${rng.id===r.id?"var(--c3)":"var(--ink-3)"}">${r.t}</span>`).join("")}</div>
   </div>`:""}
   <div class="card pad">
     <div class="qstem">${esc(q.stem)}</div>
@@ -29176,7 +29421,7 @@ function numDrill(v){
   </div>`;
   $("#nback").onclick=()=>{nState.mode=null;render();window.scrollTo(0,0);};
   v.querySelectorAll("[data-nr]").forEach(b=>{
-    const go=()=>{nState.range=b.dataset.nr;nState.cur=null;render();};
+    const go=()=>{nState[rk]=b.dataset.nr;nState.cur=null;render();};
     b.onclick=go; b.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go();}};});
   v.querySelectorAll("[data-o]").forEach(b=>b.onclick=()=>{
     if(nState.answered)return; nState.answered=true;
