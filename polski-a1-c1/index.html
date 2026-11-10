@@ -25810,6 +25810,7 @@ function save(){
   const ok=Store.write(JSON.stringify(S));
   if(!ok)scheduleHash();          /* 진짜 저장소가 없으면 주소(#)에 담아 새로고침을 견딘다 */
   cloudPush();                    /* 계정 저장소가 붙어 있으면 거기도 함께 */
+  if(typeof flPush==="function")flPush();   /* 로컬: 연결한 진도 파일에도 */
   return ok;
 }
 
@@ -26024,7 +26025,125 @@ addEventListener("visibilitychange",()=>{
   if(document.visibilityState==="hidden"&&Cloud.timer)cloudFlush();});
 
 /* 저장 방식에 대한 정직한 안내 */
+/* ---- 진도 파일 연결 (로컬 버전 · Chrome/Edge) ----
+   file:// 로 열면 진도가 그 브라우저 저장소에만 남는다. 파일을 옮기거나 새로 받으면 다른 저장소가 되어 진도가 0 으로 보인다.
+   File System Access API 로 진도 파일 하나를 골라 두면, 저장할 때마다 그 파일에 쓰고 열 때마다 그 파일과 합친다.
+   브라우저가 권한을 다시 물으면 버튼 한 번으로 다시 잇는다. 파일 형식은 local/data/progress.json 과 같다. */
+const FL={handle:null,on:false,need:false,timer:null,err:"",at:0,name:""};
+const flOK=()=>!!window.__LOCAL_BUILD&&!Cloud.on&&typeof window.showSaveFilePicker==="function";
+function flIdb(mode,fn){
+  return new Promise((res,rej)=>{
+    let rq; try{ rq=indexedDB.open("polski-progress-file",1); }catch(e){ return rej(e); }
+    rq.onupgradeneeded=()=>rq.result.createObjectStore("h");
+    rq.onerror=()=>rej(rq.error);
+    rq.onsuccess=()=>{ try{ const tx=rq.result.transaction("h",mode), st=tx.objectStore("h"), r=fn(st);
+      tx.oncomplete=()=>res(r&&"result" in r?r.result:undefined); tx.onerror=()=>rej(tx.error);}catch(e){rej(e);} };
+  });
+}
+const flGetHandle=()=>flIdb("readonly",st=>st.get("main")).catch(()=>null);
+const flSetHandle=h=>flIdb("readwrite",st=>h?st.put(h,"main"):st.delete("main")).catch(()=>{});
+async function flAttach(){
+  /* 파일에 이미 진도가 있으면 먼저 합친다 — 합집합이라 어느 쪽 기록도 잃지 않는다 */
+  let merged=false;
+  try{ const t=await (await FL.handle.getFile()).text();
+    if(t.trim()){ const b=JSON.parse(t); if(b&&typeof b.known==="string"&&typeof b.seen==="string"&&mergeBlob(b)){ Store.write(JSON.stringify(S)); merged=true; } }
+  }catch(e){}
+  FL.on=true; FL.need=false; FL.name=FL.handle.name||"";
+  await flFlush();
+  render(); updateSaveNote();
+  return merged;
+}
+async function flFlush(){
+  FL.timer=null;
+  if(!FL.on||!FL.handle)return;
+  try{ const w=await FL.handle.createWritable(); await w.write(JSON.stringify(progressBlob(),null,1)); await w.close(); FL.at=Date.now(); FL.err=""; }
+  catch(e){ FL.err=(e&&e.name)||"write"; if(FL.err==="NotAllowedError"||FL.err==="SecurityError"){ FL.on=false; FL.need=true; } }
+  updateSaveNote();
+}
+function flPush(){ try{ if(!FL.on)return; }catch(e){ return; }   /* 초기화 전에 불려도 안전하게 */
+  if(FL.timer)clearTimeout(FL.timer); FL.timer=setTimeout(flFlush,1200); }
+/* 이미 있는 진도 파일은 '열기'로 고른다. 저장 대화상자로 기존 파일을 고르면 브라우저가 내용을 비울 수 있다. */
+const FL_TYPES=[{description:"폴란드어 자습실 진도 파일",accept:{"application/json":[".json"]}}];
+function flConnect(){
+  const m=modalShell(`<h3>진도 파일 연결</h3>
+    <p>이미 진도 파일(.json)이 있으면 <b>기존 파일 고르기</b> — 파일의 진도와 지금 진도를 합친 뒤 그 파일에 자동 저장합니다.<br>
+       처음이면 <b>새 파일 만들기</b> — 지금 진도로 새 파일을 만듭니다.</p>
+    <div class="inline" style="justify-content:flex-end;flex-wrap:wrap">
+      <button class="btn ghost" data-no>취소</button>
+      <button class="btn ghost" data-new>새 파일 만들기</button>
+      <button class="btn red" data-open>기존 파일 고르기</button></div>`);
+  m.bg.querySelector("[data-no]").onclick=m.close;
+  m.bg.querySelector("[data-open]").onclick=()=>{ m.close(); flPick(false); };
+  m.bg.querySelector("[data-new]").onclick=()=>{ m.close(); flPick(true); };
+  m.bg.querySelector("[data-open]").focus();
+}
+async function flPick(fresh){
+  try{
+    let h;
+    if(fresh||typeof window.showOpenFilePicker!=="function"){
+      h=await window.showSaveFilePicker({suggestedName:"polski-progress.json",types:FL_TYPES});
+    }else{
+      [h]=await window.showOpenFilePicker({types:FL_TYPES,multiple:false});
+      if((await h.requestPermission({mode:"readwrite"}))!=="granted")
+        return notify("쓰기 권한이 필요합니다","파일에 진도를 저장하려면 '수정 허용'을 눌러 주세요.");
+      /* 진도 파일이 맞는지 먼저 확인 — 엉뚱한 파일을 덮어쓰지 않게 */
+      const t=await (await h.getFile()).text();
+      let b=null; try{ b=t.trim()?JSON.parse(t):null; }catch(e){ b=undefined; }
+      if(b===undefined||(b&&(typeof b.known!=="string"||typeof b.seen!=="string")))
+        return notify("진도 파일이 아닙니다","'진도 파일로 저장'이나 연결로 만든 .json 을 고르세요. 이 파일은 건드리지 않았습니다.");
+    }
+    FL.handle=h; await flSetHandle(h);
+    const merged=await flAttach();
+    notify("진도 파일을 연결했습니다", "<b>"+esc(FL.name)+"</b> 에 자동 저장합니다."+(merged?"<br>파일에 있던 진도와 합쳤습니다.":"")
+      +"<br>다음에 열 때 브라우저가 권한을 다시 물으면 '진도 파일 다시 연결'을 한 번 누르세요.");
+  }catch(e){ if(e&&e.name!=="AbortError")notify("파일을 연결하지 못했습니다",esc((e&&e.message)||"다시 시도해 주세요.")); }
+}
+async function flReconnect(){
+  if(!FL.handle)return flConnect();
+  try{ const p=await FL.handle.requestPermission({mode:"readwrite"});
+    if(p==="granted"){ const merged=await flAttach(); if(merged)notify("진도 파일과 합쳤습니다","<b>"+esc(FL.name)+"</b> 의 진도를 불러왔습니다."); }
+  }catch(e){ notify("다시 연결하지 못했습니다","'진도 파일 연결'로 파일을 다시 골라 주세요."); }
+}
+async function flInit(){
+  if(!flOK())return;
+  const h=await flGetHandle(); if(!h)return;
+  FL.handle=h; FL.name=h.name||"";
+  let p="prompt"; try{ p=await h.queryPermission({mode:"readwrite"}); }catch(e){}
+  if(p==="granted")await flAttach(); else { FL.need=true; render(); updateSaveNote(); }
+}
+addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden"&&FL.timer){ clearTimeout(FL.timer); flFlush(); } });
+
+/* ---- 진도가 비어 보일 때 안내 ----
+   Claude 뷰어(계정)·로컬 파일·로컬 서버는 저장소가 서로 다르다. 다른 쪽에서 열면 진도가 0 으로 보이는데,
+   사라진 게 아니라 다른 곳에 있다. 그 사실과 불러오는 길을 화면 맨 위에 보여 준다. */
+const progressEmpty=()=>!Object.keys(S.seen).some(k=>S.seen[k])&&!Object.keys(S.lessons).some(k=>S.lessons[k]);
+function progressBanner(){
+  if(!Cloud.tried)return "";
+  const box=(title,body,btns)=>`<div class="card pad" style="margin-top:22px;border-color:color-mix(in srgb,var(--amber) 45%,transparent);background:var(--amber-soft)">
+    <div style="font-weight:680;font-size:15px">${title}</div>
+    <div style="font-size:13.5px;color:var(--ink-2);margin-top:4px;line-height:1.65;max-width:70ch">${body}</div>
+    <div class="inline" style="margin-top:12px">${btns}</div></div>`;
+  if(FL.need)return box("진도 파일을 다시 연결해 주세요",
+    `브라우저가 <b>${esc(FL.name||"진도 파일")}</b> 에 다시 쓸 권한을 묻고 있습니다. 한 번 누르면 파일의 진도를 불러오고 그 뒤로 자동 저장합니다.`,
+    `<button class="btn" data-eb="reconnect">진도 파일 다시 연결</button>`);
+  if(!progressEmpty()||S.bannerOff)return "";
+  const where=Cloud.on&&!window.__LOCAL_BUILD?"이 화면은 계정 저장소를 쓰고 있는데 아직 기록이 없습니다. 다른 곳에서 공부했다면 그쪽에서 백업 코드를 만들어 여기에 붙여 넣으세요."
+    :Cloud.on?"이 로컬 서버는 <b>local › data › progress.json</b> 에 저장합니다. Claude 뷰어(계정)나 파일로 연 사본의 진도는 자동으로 오지 않습니다."
+    :window.__LOCAL_BUILD?"파일로 연 로컬 버전은 <b>이 브라우저 저장소</b>에만 저장합니다. Claude 뷰어(계정)의 진도, 다른 폴더·다른 브라우저에서 연 사본의 진도는 자동으로 오지 않습니다."
+      +(flOK()?" 아래 <b>진도 파일 연결</b>을 해 두면 다음부터는 파일에 자동 저장되어 사본이 바뀌어도 이어집니다.":"")
+    :"이 앱에서는 계정 저장소에 연결되지 않아 이 기기 브라우저에만 저장됩니다. 다른 곳에서 공부했다면 그쪽 백업 코드를 붙여 넣으세요.";
+  return box("진도가 0으로 보이나요? 기록은 다른 저장소에 있을 수 있습니다", where,
+    `${window.__LOCAL_BUILD?`<button class="btn" data-eb="file">진도 파일 불러오기</button>`:""}
+     <button class="btn ${window.__LOCAL_BUILD?"ghost":""}" data-eb="code">백업 코드로 불러오기</button>
+     ${flOK()?`<button class="btn ghost" data-eb="link">진도 파일 연결 (자동 저장)</button>`:""}
+     <button class="lnk" data-eb="off">처음 시작이에요 — 닫기</button>`);
+}
+
 function storageInfo(){
+  if(FL.on) return {tone:"ok",t:"연결한 진도 파일에 자동 저장됩니다 — "+FL.name+(FL.err?" (저장 지연)":""),
+    d:"저장할 때마다 이 파일에 쓰고, 열 때마다 이 파일과 합칩니다. 파일을 옮겼다면 '진도 파일 연결'로 다시 골라 주세요. Claude 뷰어와는 '백업 코드'나 이 파일로 주고받습니다."};
+  if(FL.need) return {tone:"warn",t:"진도 파일 연결이 쉬고 있습니다 — '진도 파일 다시 연결'을 눌러 주세요.",
+    d:"그동안 공부한 내용은 이 브라우저에 저장되었다가, 다시 연결하면 파일과 합쳐집니다."};
   if(window.__LOCAL_BUILD&&Cloud.on) return {tone:"ok",t:"이 Mac에 파일로 자동 저장됩니다."+(Cloud.err?" (저장 지연)":""),
     d:"브라우저 기록·사이트 데이터를 지워도 진도가 남습니다. 파일은 자습실 폴더의 local › data 에 있고, 날짜별 사본을 60일 보관합니다. Claude 뷰어와 주고받을 때는 아래 '백업 코드 만들기'로 코드를 복사해 뷰어의 '코드로 불러오기 → 합치기'에 붙여 넣으세요."};
   if(Cloud.on)             return {tone:"ok",  t:"계정에 자동 저장됩니다."+(Cloud.err?" (동기화 지연)":""),
@@ -26330,7 +26449,7 @@ function viewHome(){
   const nouns=DECL.length, verbs=VERBS.filter(v=>lvOK(v.lv)).length, adjs=ADJS.filter(a=>lvOK(a.lv)).length;
   const q=S.quiz.slice(-5);
   const avg=q.length?Math.round(q.reduce((a,b)=>a+b.pct,0)/q.length):0;
-  return `
+  return `${progressBanner()}
   <div class="hero">
     <div class="eyebrow">Poziom A1 → C1 · 자습 과정</div>
     <h2>어미를 손에 익히면<br>폴란드어가 열립니다.</h2>
@@ -26418,6 +26537,7 @@ function viewHome(){
       ${window.__LOCAL_BUILD?`<button class="btn ghost" id="pfSave">진도 파일로 저장</button>
       <button class="btn ghost" id="pfLoad">진도 파일 불러오기</button>
       <input type="file" id="pfFile" accept=".json,application/json" class="hidden">`:""}
+      ${flOK()?`<button class="btn ${FL.on?"ghost":""}" data-eb="${FL.need?"reconnect":"link"}">${FL.need?"진도 파일 다시 연결":FL.on?"다른 진도 파일로 바꾸기":"진도 파일 연결 (자동 저장)"}</button>`:""}
       <span style="font-size:12.5px;color:var(--ink-3)">기기를 옮길 때도 이 코드를 씁니다.</span>
     </div>
     <div id="codeBox" class="hidden" style="margin-top:14px"></div>
@@ -26533,7 +26653,7 @@ function viewVocab(v){
 function vocabDeckList(){
   const decks=DECKS.filter(d=>lvOK(d.lv)).slice().sort((x,y)=>LEVELS.indexOf(x.lv)-LEVELS.indexOf(y.lv));
   const shown=wordsAt().length;   /* 중복 표제어는 한 번만 센다 */
-  return `<h2 class="sec">단어장</h2>
+  return `${progressBanner()}<h2 class="sec">단어장</h2>
   <p class="lede">테마를 고르면 카드 학습이 시작됩니다. 카드를 눌러 뜻을 확인하고, <b>알아요 / 헷갈려요</b>로 표시하면 진도에 반영됩니다.
     지금은 <b>${lvLabel()}</b> 범위의 ${decks.length}개 테마 · ${shown}개 단어를 보고 있습니다.</p>
   <input class="search" id="wq" placeholder="${lvLabel()} 단어 ${shown}개 검색 — 폴란드어나 한국어로">
@@ -31474,7 +31594,23 @@ function updateSaveNote(){
   if(old&&old.textContent.indexOf("진도는")===0)old.remove();
   updateSaveNote();
 })();
-cloudInit();
+/* 안내·연결 버튼 — 홈과 단어장 어디서 눌러도 같은 동작 */
+$("#view").addEventListener("click",e=>{
+  const b=e.target.closest("[data-eb]"); if(!b)return;
+  const k=b.dataset.eb;
+  if(k==="link"){ flConnect(); return; }
+  if(k==="reconnect"){ flReconnect(); return; }
+  if(k==="off"){ S.bannerOff=true; save(); render(); return; }
+  const open=()=>{ const t=k==="file"?$("#pfLoad"):$("#impBtn"); if(t){ t.click(); t.scrollIntoView({block:"center"}); } };
+  if(route!=="home"){ setTab("home"); setTimeout(open,0); } else open();
+});
+cloudInit().catch(()=>{}).then(()=>{
+  Cloud.tried=true;
+  return flInit().catch(()=>{});
+}).then(()=>{
+  if(route==="home"||(route==="vocab"&&!vState.deck&&!wt))render();
+  updateSaveNote();
+});
 aiInit();          /* 묻지 않고 준비만 한다 — 허락은 첫 판정 때 */
 
 renderTabs();render();
