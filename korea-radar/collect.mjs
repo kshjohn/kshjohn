@@ -20,11 +20,18 @@ const decode = s => s
   .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(+d))
   .replace(/&(\w+);/g, (m, n) => ENT[n] ?? m)
   .trim();
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 const tag = (xml, name) => { const m = xml.match(new RegExp(`<${name}[^>]*>([\\s\\S]*?)</${name}>`)); return m ? decode(m[1]) : ""; };
 
 async function fetchQuery(q) {
   const url = "https://news.google.com/rss/search?q=" + encodeURIComponent(q.q + " when:30d") + "&hl=pl&gl=PL&ceid=PL:pl";
-  const res = await fetch(url, { headers: { "user-agent": "Mozilla/5.0 (compatible; feed-reader)" }, signal: AbortSignal.timeout(30000) });
+  let res;
+  // Google이 요청이 잦다고 429를 주면 쉬었다가 다시 시도한다
+  for (let attempt = 0; attempt < 3; attempt++) {
+    res = await fetch(url, { headers: { "user-agent": "Mozilla/5.0 (compatible; feed-reader)" }, signal: AbortSignal.timeout(30000) });
+    if (res.status !== 429) break;
+    await sleep(20000 * (attempt + 1));
+  }
   if (!res.ok) throw new Error("HTTP " + res.status);
   const xml = await res.text();
   if (!xml.includes("<rss")) throw new Error("not an RSS response");
@@ -54,7 +61,7 @@ for (const q of QUERIES) {
     queries[q.id] = { ok: false, count: 0 };
     console.log(`${q.id}: FAILED ${e.message}`);
   }
-  await new Promise(r => setTimeout(r, 1500));
+  await sleep(4000);
 }
 
 if (!Object.values(queries).some(q => q.ok)) { console.error("every query failed"); process.exit(1); }
