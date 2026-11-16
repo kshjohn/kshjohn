@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Korea Radar — 폴란드 언론의 한국 언급 모니터</title>
+<style>
+  /* Layout: 요약 타일 → 지금 받아칠 이슈(전체 폭) → 헤드라인 피드 3 : 보조 패널 2 */
+  :root {
+    color-scheme: light;
+    --surface-1: #fcfcfb;
+    --page: #f9f9f7;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #898781;
+    --grid: #e1e0d9;
+    --baseline: #c3c2b7;
+    --border: rgba(11,11,11,0.10);
+    --series-1: #2a78d6;
+    --series-1-soft: rgba(42,120,214,0.14);
+    --good: #0a8a0a;
+    --good-soft: rgba(12,163,12,0.12);
+    --warn: #a86400;
+    --warn-soft: rgba(214,138,0,0.16);
+    --critical: #c93434;
+    --critical-soft: rgba(208,59,59,0.12);
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-1: #1a1a19;
+    --page: #0d0d0d;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --grid: #2c2c2a;
+    --baseline: #383835;
+    --border: rgba(255,255,255,0.10);
+    --series-1: #4a94ec;
+    --series-1-soft: rgba(57,135,229,0.20);
+    --good: #3cc23c;
+    --good-soft: rgba(60,194,60,0.16);
+    --warn: #e8a93a;
+    --warn-soft: rgba(232,169,58,0.16);
+    --critical: #ef6a6a;
+    --critical-soft: rgba(239,106,106,0.16);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --surface-1: #1a1a19;
+      --page: #0d0d0d;
+      --text-primary: #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted: #898781;
+      --grid: #2c2c2a;
+      --baseline: #383835;
+      --border: rgba(255,255,255,0.10);
+      --series-1: #4a94ec;
+      --series-1-soft: rgba(57,135,229,0.20);
+      --good: #3cc23c;
+      --good-soft: rgba(60,194,60,0.16);
+      --warn: #e8a93a;
+      --warn-soft: rgba(232,169,58,0.16);
+      --critical: #ef6a6a;
+      --critical-soft: rgba(239,106,106,0.16);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    line-height: 1.5;
+  }
+  a { color: inherit; }
+  button { font: inherit; }
+  :focus-visible { outline: 2px solid var(--series-1); outline-offset: 2px; }
+
+  .wrap { max-width: 1140px; margin: 0 auto; padding: 20px 16px 64px; }
+
+  header.app { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; padding: 8px 0 12px; }
+  header.app h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+  header.app .sub { color: var(--text-secondary); font-size: 13px; }
+  header.app .spacer { flex: 1; }
+  .btn {
+    border: 1px solid var(--border); background: var(--surface-1);
+    color: var(--text-primary); border-radius: 8px; padding: 6px 12px;
+    font-size: 13px; cursor: pointer;
+  }
+  .btn:hover { border-color: var(--baseline); }
+  .btn[disabled] { opacity: 0.5; cursor: default; }
+  .btn.small { padding: 3px 9px; font-size: 12px; }
+  .btn.on { background: var(--series-1); border-color: transparent; color: #fff; }
+
+  .meta-row { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
+  .src { display: inline-flex; align-items: center; gap: 5px; }
+  .src .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--baseline); display: inline-block; }
+  .src.ok .dot { background: var(--good); }
+  .src.fail .dot { background: var(--critical); }
+  .src.pending .dot { animation: pulse 1.2s infinite; }
+  @keyframes pulse { 50% { opacity: 0.3; } }
+  @media (prefers-reduced-motion: reduce) { .src.pending .dot { animation: none; } .bar { transition: none !important; } }
+
+  .notice {
+    border: 1px solid var(--border); background: var(--warn-soft); color: var(--text-primary);
+    border-radius: 10px; padding: 10px 14px; font-size: 13px; margin-bottom: 16px;
+  }
+
+  /* ---- KPI tiles ---- */
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+  @media (max-width: 860px) { .kpis { grid-template-columns: repeat(2, 1fr); } }
+  .kpi { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; min-width: 0; }
+  .kpi .k-label { font-size: 12px; color: var(--text-muted); }
+  .kpi .k-value { font-size: 24px; font-weight: 650; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; line-height: 1.25; overflow-wrap: anywhere; }
+  .kpi .k-value.text { font-size: 18px; padding-top: 4px; }
+  .kpi .k-note { font-size: 12px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  .up { color: var(--good); } .down { color: var(--critical); }
+
+  .grid { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; }
+  .grid > div { min-width: 0; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 18px 18px 16px; margin-bottom: 16px; }
+  .card h2 { font-size: 15px; margin: 0 0 2px; }
+  .card .desc { font-size: 12px; color: var(--text-muted); margin: 0 0 14px; }
+  .empty { color: var(--text-muted); font-size: 13px; padding: 12px 0; }
+
+  /* ---- stories: 지금 받아칠 이슈 ---- */
+  .story { display: grid; grid-template-columns: 96px 1fr auto; gap: 6px 14px; padding: 12px 0; border-top: 1px solid var(--grid); align-items: start; }
+  .story:first-of-type { border-top: none; padding-top: 2px; }
+  @media (max-width: 640px) { .story { grid-template-columns: 1fr; } }
+  .story .win { font-size: 12px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  .pill { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+  .pill.go { background: var(--good-soft); color: var(--good); }
+  .pill.soon { background: var(--warn-soft); color: var(--warn); }
+  .pill.closed { background: var(--critical-soft); color: var(--critical); }
+  .winbar { height: 4px; background: var(--grid); border-radius: 2px; margin-top: 6px; overflow: hidden; max-width: 96px; }
+  .winbar i { display: block; height: 100%; background: var(--good); }
+  .winbar.soon i { background: var(--warn); }
+  .winbar.closed i { background: var(--critical); }
+  .story .body { min-width: 0; }
+  .story .s-title { font-size: 15px; font-weight: 600; text-decoration: none; overflow-wrap: anywhere; }
+  .story .s-title:hover { text-decoration: underline; }
+  .story .s-meta { font-size: 12px; color: var(--text-muted); margin-top: 3px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+  .story .s-links { font-size: 12px; color: var(--text-secondary); margin-top: 4px; display: flex; flex-wrap: wrap; gap: 2px 10px; }
+  .story .s-links a { text-decoration: underline; text-decoration-color: var(--baseline); text-underline-offset: 2px; }
+  .story .acts { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tag { color: var(--series-1); }
+  .aud { font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-secondary); white-space: nowrap; }
+  .aud.both { border-color: transparent; background: var(--series-1-soft); color: var(--series-1); font-weight: 600; }
+
+  /* ---- topic chart ---- */
+  .chart { display: grid; grid-template-columns: max-content 1fr; row-gap: 9px; column-gap: 10px; }
+  .chart .row-label { font-size: 13px; color: var(--text-secondary); align-self: center; text-align: right; cursor: pointer; white-space: nowrap; background: none; border: 0; padding: 0; }
+  .chart .row-label:hover, .chart .row-label.active { color: var(--text-primary); font-weight: 600; }
+  .chart .track { position: relative; align-self: center; height: 22px; cursor: pointer; }
+  .chart .bar { position: absolute; left: 0; top: 3px; height: 16px; background: var(--series-1); border-radius: 0 4px 4px 0; min-width: 2px; transition: width 0.4s ease; }
+  .chart .track.dim .bar { background: var(--series-1-soft); }
+  .chart .prev { position: absolute; top: 0; height: 22px; width: 2px; background: var(--text-muted); }
+  .chart .val { position: absolute; top: 0; height: 22px; display: flex; align-items: center; font-size: 12px; color: var(--text-secondary); padding-left: 6px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .chart .axis-note { grid-column: 1 / -1; font-size: 11px; color: var(--text-muted); border-top: 1px solid var(--grid); padding-top: 6px; }
+  .legend-tick { display: inline-block; width: 2px; height: 10px; background: var(--text-muted); vertical-align: -1px; margin: 0 3px; }
+
+  /* ---- daily columns ---- */
+  .days { display: flex; align-items: flex-end; gap: 2px; height: 72px; border-bottom: 1px solid var(--baseline); }
+  .days .col { flex: 1; min-width: 0; background: var(--series-1); border-radius: 2px 2px 0 0; min-height: 1px; }
+  .days .col.zero { background: var(--grid); }
+  .days-axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+  /* ---- feed ---- */
+  .filter-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .chip { font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--text-secondary); cursor: pointer; }
+  .chip.active { background: var(--series-1); color: #fff; border-color: transparent; }
+  .headline { padding: 9px 0; border-top: 1px solid var(--grid); }
+  .headline:first-of-type { border-top: none; }
+  .headline a.t { text-decoration: none; font-size: 14px; overflow-wrap: anywhere; }
+  .headline a.t:hover { text-decoration: underline; }
+  .headline .hl-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; display: flex; gap: 4px 8px; flex-wrap: wrap; align-items: center; }
+  .linkbtn { background: none; border: 0; padding: 0; color: var(--text-secondary); font-size: 11px; cursor: pointer; text-decoration: underline; text-decoration-color: var(--baseline); text-underline-offset: 2px; }
+  .linkbtn:hover { color: var(--text-primary); }
+
+  /* ---- backlog ---- */
+  .bl { padding: 9px 0; border-top: 1px solid var(--grid); }
+  .bl:first-of-type { border-top: none; }
+  .bl .bl-title { font-size: 13px; overflow-wrap: anywhere; }
+  .bl .bl-row { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; margin-top: 5px; font-size: 12px; color: var(--text-muted); }
+  .bl select { font: inherit; font-size: 12px; padding: 2px 4px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary); }
+
+  /* ---- wiki ---- */
+  .wk { display: grid; grid-template-columns: 1fr 92px auto; gap: 10px; align-items: center; padding: 6px 0; border-top: 1px solid var(--grid); font-size: 13px; }
+  .wk:first-of-type { border-top: none; }
+  .wk a { text-decoration: none; } .wk a:hover { text-decoration: underline; }
+  .wk .pl { display: block; font-size: 11px; color: var(--text-muted); }
+  .wk .num { text-align: right; font-variant-numeric: tabular-nums; font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
+  .wk svg { display: block; width: 92px; height: 24px; }
+  .wk polyline { fill: none; stroke: var(--series-1); stroke-width: 1.5; }
+  .wk circle { fill: var(--series-1); }
+
+  .links { display: flex; flex-wrap: wrap; gap: 6px; }
+  .links a { font-size: 12px; text-decoration: none; padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px; color: var(--text-secondary); }
+  .links a:hover { border-color: var(--baseline); color: var(--text-primary); }
+  .links-h { font-size: 12px; color: var(--text-muted); margin: 12px 0 6px; }
+  .links-h:first-of-type { margin-top: 0; }
+
+  footer { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="app">
+    <h1>Korea Radar</h1>
+    <span class="sub">폴란드 언론이 한국을 언급하면, 2주 안에 받아치기 위한 모니터</span>
+    <span class="spacer"></span>
+    <button class="btn" id="refresh" type="button">새로고침</button>
+    <button class="btn" id="theme" type="button" aria-label="테마 전환">테마</button>
+  </header>
+
+  <div class="meta-row" id="status"></div>
+  <div class="notice" id="notice" hidden></div>
+
+  <section class="kpis" id="kpis" aria-label="요약"></section>
+
+  <section class="card">
+    <h2>지금 받아칠 이슈</h2>
+    <p class="desc">여러 매체가 같은 한국 이슈를 다룬 묶음입니다. 첫 보도일부터 14일이 반응 창이고, 7일 안이면 검색 유입이 가장 큽니다.</p>
+    <div class="filter-row" id="story-filters"></div>
+    <div id="stories"><div class="empty">헤드라인을 수집하고 있습니다.</div></div>
+  </section>
+
+  <div class="grid">
+    <div>
+      <section class="card">
+        <h2>헤드라인 피드</h2>
+        <p class="desc">Google 뉴스 폴란드판 검색과 r/Polska에서 모은 한국 관련 글. 최신순.</p>
+        <div class="filter-row" id="topic-chips"></div>
+        <div class="filter-row" id="feed-opts"></div>
+        <div id="feed"><div class="empty">헤드라인을 수집하고 있습니다.</div></div>
+        <button class="btn" id="more" type="button" hidden>더 보기</button>
+      </section>
+    </div>
+
+    <div>
+      <section class="card">
+        <h2>토픽별 언급량</h2>
+        <p class="desc">최근 7일 헤드라인 수. 토픽을 누르면 피드가 걸러집니다.</p>
+        <div class="chart" id="chart"></div>
+      </section>
+
+      <section class="card">
+        <h2>일별 언급 추이</h2>
+        <p class="desc">최근 30일, 제목에 한국이 직접 등장한 헤드라인 수.</p>
+        <div class="days" id="days"></div>
+        <div class="days-axis" id="days-axis"></div>
+      </section>
+
+      <section class="card">
+        <h2>영상 후보</h2>
+        <p class="desc">담아둔 이슈와 제작 마감(첫 보도 + 14일). 이 브라우저에만 저장됩니다.</p>
+        <div id="backlog"></div>
+      </section>
+
+      <section class="card">
+        <h2>폴란드어 위키백과 조회수</h2>
+        <p class="desc">한국 관련 문서의 30일 조회 추이. 최근 3일이 평소의 1.8배를 넘으면 급증으로 표시합니다.</p>
+        <div id="wiki"><div class="empty">조회수를 불러오고 있습니다.</div></div>
+      </section>
+
+      <section class="card">
+        <h2>직접 확인할 곳</h2>
+        <p class="desc">자동 수집이 안 되는 커뮤니티와 검색 지표.</p>
+        <div id="manual"></div>
+      </section>
+    </div>
+  </div>
+
+  <footer>
+    수집은 전부 이 브라우저에서 일어나고 서버에 저장되는 것은 없습니다. 토픽 분류와 이슈 묶음은 제목 키워드 기반 근사치입니다.
+    검색어와 토픽은 <code>index.html</code>의 <code>QUERIES</code>, <code>TOPICS</code>에서 바꿉니다.
+  </footer>
+</div>
+
+<script>
+"use strict";
+
+/* ================= 설정 ================= */
+
+// 반응 창: 첫 보도 후 며칠까지 "받아치기"가 유효한가
+const WINDOW_DAYS = 14;
+const PRIME_DAYS = 7;
+const KEEP_DAYS = 45;          // 로컬 기록 보존 기간
+const CACHE_TTL_MIN = 30;      // 이 시간 안에 다시 열면 재수집하지 않음
+
+// aud: both = 20–30대 여성과 30–50대 남성이 둘 다 클릭하는 일상형 사회 이슈
+//      f / m = 한쪽으로 쏠리는 주제, news = 시사성(채널 주제와 거리가 있음)
+const TOPICS = [
+  { id: "demo",    ko: "저출산·인구",    aud: "both", re: /dzietno|demograf|urodze[nń]|wyludni|starzej|bezdzietn|przyrost natural|rodzi si[eę]|mie[cć] dzieci|ma dzieci/ },
+  { id: "edu",     ko: "교육·입시",      aud: "both", re: /edukac|szko[lł]|uczni|ucze[nń]|egzamin|matur|student|uniwersyt|korepetyc|hagwon|suneung/ },
+  { id: "work",    ko: "노동·근로시간",  aud: "both", re: /czas pracy|czasu pracy|nadgodzin|tydzie[nń] pracy|godzin pracy|godzin tygodniowo|przepracow|pracoholi|pracownik|zarobk|pensj|bezroboc|strajk|emerytur/ },
+  { id: "life",    ko: "주거·결혼·생활비", aud: "both", re: /mieszka|nieruchomo|czynsz|[sś]lub|ma[lł]że[nń]|samotn|randk|singl|koszty? życia|kosztów życia|rozw[oó]d|incel|feminiz/ },
+  { id: "army",    ko: "병역·입대",      aud: "both", re: /s[lł]użb\S* wojskow|pob[oó]r|poborow|zasadnicz|do wojska|w wojsku|do armii/ },
+  { id: "defense", ko: "K-방산",         aud: "m",    re: /\bk2\b|k2pl|\bk9\b|fa-?50|hanwha|rotem|czo[lł]g|haubic|homar-?k|chunmoo|zbrojeni|uzbrojeni|my[sś]liw|okr[eę]t|orka\b|kf-?21|wyrzutni/ },
+  { id: "culture", ko: "K-컬처",         aud: "f",    re: /k-?pop|k-?dram|serial|netflix|squid|\bbts\b|blackpink|idol|koncert|\bfilm|aktor|piosenkar|kimchi|kuchni|kosmetyk|k-?beauty|webtoon|manhw|hallyu/ },
+  { id: "biz",     ko: "경제·기업",      aud: "m",    re: /samsung|hyundai|\blg\b|\bsk\b|\bkia\b|inwestyc|fabryk|bateri|p[oó][lł]przewodnik|chip|eksport|gospodark|\bpkb\b|\bwon\b|gie[lł]d|c[lł]a\b|elektrowni|atomow|j[aą]drow|khnp/ },
+  { id: "politics",ko: "정치·북한",      aud: "news", re: /p[oó][lł]nocn|kim dzong|pjongjang|phenian|prezydent|wybor|impeach|stan wojenny|rakiet|nuklearn|premier|szczyt|sankcj/ },
+  { id: "other",   ko: "기타",           aud: "news", re: null }
+];
+const TOPIC = Object.fromEntries(TOPICS.map(t => [t.id, t]));
+const AUD_LABEL = { both: "교집합", f: "여성 쏠림", m: "남성 쏠림", news: "시사" };
+
+// Google 뉴스 폴란드판 검색어. topic은 제목 키워드로 분류가 안 될 때의 기본값.
+const KOREA = '(Korea OR Korei OR koreański OR Koreańczycy)';
+const QUERIES = [
+  { id: "general", ko: "한국 일반", topic: null,      q: '"Korea Południowa" OR "Korei Południowej" OR "Koreą Południową" OR Koreańczycy' },
+  { id: "demo",    ko: "저출산",    topic: "demo",    q: KOREA + ' (dzietność OR demografia OR "kryzys demograficzny" OR urodzeń)' },
+  { id: "edu",     ko: "교육",      topic: "edu",     q: KOREA + ' (edukacja OR szkoła OR uczniowie OR egzamin OR korepetycje)' },
+  { id: "work",    ko: "노동",      topic: "work",    q: KOREA + ' ("czas pracy" OR nadgodziny OR "tydzień pracy" OR przepracowanie)' },
+  { id: "life",    ko: "주거·결혼", topic: "life",    q: KOREA + ' (mieszkania OR ślub OR małżeństwo OR samotność OR "koszty życia")' },
+  { id: "army",    ko: "병역",      topic: "army",    q: KOREA + ' ("służba wojskowa" OR pobór OR "do wojska")' },
+  { id: "defense", ko: "방산",      topic: "defense", q: '"czołgi K2" OR K2PL OR "haubice K9" OR "FA-50" OR Hanwha OR "Hyundai Rotem" OR "Homar-K"' },
+  { id: "culture", ko: "K-컬처",    topic: "culture", q: '"K-pop" OR "k-drama" OR "koreański serial" OR "koreańskie seriale" OR "Squid Game"' },
+  { id: "biz",     ko: "기업",      topic: "biz",     q: KOREA + ' Polska (inwestycja OR fabryka OR Samsung OR Hyundai OR "LG Energy")' }
+];
+
+// 제목에 한국이 직접 등장하는지 (본문에서만 스치는 기사를 가르는 기준)
+const KOREA_RE = /kore[aiąęoń]|korea[nń]|seul|k-?pop|k-?dram|hanwha|rotem|fa-?50|\bk2\b|k2pl|\bk9\b|homar-?k|samsung|hyundai|squid game|\bbts\b|blackpink|hallyu/;
+// K2 산(등반) 뉴스 제외
+const NOISE_RE = /himalaj|karakorum|wspinacz|alpinist|narciar|bielecki|zdobywc|szczyt k2|na k2\b/;
+
+const WIKI = [
+  { t: "Korea Południowa",      ko: "대한민국" },
+  { t: "Korea Północna",        ko: "북한" },
+  { t: "Seul",                  ko: "서울" },
+  { t: "Język koreański",       ko: "한국어" },
+  { t: "Hangul",                ko: "한글" },
+  { t: "K-pop",                 ko: "K-팝" },
+  { t: "BTS",                   ko: "BTS" },
+  { t: "Squid Game",            ko: "오징어 게임" },
+  { t: "K2 Black Panther",      ko: "K2 전차" },
+  { t: "K9 Thunder",            ko: "K9 자주포" },
+  { t: "KAI T-50 Golden Eagle", ko: "FA-50 계열" },
+  { t: "Kimchi",                ko: "김치" }
+];
+
+const enc = encodeURIComponent;
+const MANUAL = [
+  { h: "Wykop 태그", links: [
+    ["#koreapoludniowa", "https://wykop.pl/tag/koreapoludniowa"],
+    ["#korea", "https://wykop.pl/tag/korea"],
+    ["#kpop", "https://wykop.pl/tag/kpop"],
+    ["#wojsko", "https://wykop.pl/tag/wojsko"],
+    ["#demografia", "https://wykop.pl/tag/demografia"]
+  ]},
+  { h: "Reddit", links: [
+    ["r/Polska · Korea 최신", "https://www.reddit.com/r/Polska/search/?q=Korea&restrict_sr=1&sort=new"],
+    ["r/poland · Korea 최신", "https://www.reddit.com/r/poland/search/?q=Korea&restrict_sr=1&sort=new"]
+  ]},
+  { h: "검색 지표", links: [
+    ["Google Trends (PL, 30일)", "https://trends.google.com/trends/explore?geo=PL&date=today%201-m&q=" + enc("Korea Południowa,K-pop,czołgi K2")],
+    ["Google 뉴스 PL", "https://news.google.com/search?q=" + enc('"Korea Południowa"') + "&hl=pl&gl=PL&ceid=PL:pl"],
+    ["YouTube · 이번 주 업로드", "https://www.youtube.com/results?search_query=" + enc("Korea Południowa") + "&sp=EgIIAw%3D%3D"]
+  ]}
+];
+
+/* ================= 유틸 ================= */
+
+const $ = id => document.getElementById(id);
+const DAY = 86400000;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const safeUrl = u => /^https?:\/\//i.test(u || "") ? u : "#";
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+function hash(s) { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
+function ageDays(ts, now = Date.now()) { return Math.max(0, Math.floor((now - ts) / DAY)); }
+function rel(ts) {
+  const m = Math.floor((Date.now() - ts) / 60000);
+  if (m < 60) return Math.max(1, m) + "분 전";
+  if (m < 1440) return Math.floor(m / 60) + "시간 전";
+  return Math.floor(m / 1440) + "일 전";
+}
+function mmdd(ts) { const d = new Date(ts); return (d.getMonth() + 1) + "/" + d.getDate(); }
+
+/* ================= 수집 ================= */
+
+const PROXIES = [
+  u => "https://api.allorigins.win/raw?url=" + enc(u),
+  u => "https://corsproxy.io/?url=" + enc(u),
+  u => "https://api.codetabs.com/v1/proxy/?quest=" + enc(u)
+];
+let proxyStart = 0;
+
+async function fetchText(url, ms = 15000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try {
+    const res = await fetch(url, { signal: ctrl.signal });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return await res.text();
+  } finally { clearTimeout(timer); }
+}
+
+// 프록시를 차례로 시도하고, 성공한 프록시를 다음 요청의 첫 순서로 기억
+async function viaProxy(url, looksValid) {
+  let lastErr;
+  for (let i = 0; i < PROXIES.length; i++) {
+    const idx = (proxyStart + i) % PROXIES.length;
+    try {
+      const text = await fetchText(PROXIES[idx](url));
+      if (!looksValid(text)) throw new Error("unexpected response");
+      proxyStart = idx;
+      return text;
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr || new Error("all proxies failed");
+}
+
+const gnUrl = q => "https://news.google.com/rss/search?q=" + enc(q + " when:30d") + "&hl=pl&gl=PL&ceid=PL:pl";
+
+function classify(title, fallback) {
+  const t = title.toLowerCase();
+  for (const tp of TOPICS) if (tp.re && tp.re.test(t)) return tp.id;
+  return fallback || "other";
+}
+
+function makeItem(rawTitle, link, ts, source, queryTopic) {
+  let title = (rawTitle || "").replace(/\s+/g, " ").trim();
+  // Google 뉴스 제목은 "헤드라인 - 매체명" 형식
+  if (source && title.endsWith(" - " + source)) title = title.slice(0, -(source.length + 3));
+  if (!title || !ts || isNaN(ts)) return null;
+  const low = title.toLowerCase();
+  if (NOISE_RE.test(low)) return null;
+  return {
+    id: hash(low.replace(/[^\p{L}\p{N}]+/gu, "")),
+    title, link: safeUrl(link), ts, source: source || "?",
+    topic: classify(title, queryTopic),
+    strong: KOREA_RE.test(low)
+  };
+}
+
+async function fetchQuery(query) {
+  const xml = await viaProxy(gnUrl(query.q), t => t.includes("<rss") || t.includes("<item"));
+  const doc = new DOMParser().parseFromString(xml, "text/xml");
+  const out = [];
+  for (const n of doc.getElementsByTagName("item")) {
+    const g = tag => n.getElementsByTagName(tag)[0]?.textContent || "";
+    const it = makeItem(g("title"), g("link"), Date.parse(g("pubDate")), g("source").trim(), query.topic);
+    if (it) out.push(it);
+  }
+  return out;
+}
+
+async function fetchReddit() {
+  const url = "https://www.reddit.com/r/Polska/search.json?q=" + enc("Korea OR Korei OR koreański OR Koreańczycy") + "&restrict_sr=1&sort=new&t=month&limit=40&raw_json=1";
+  let text;
+  try { text = await fetchText(url); }
+  catch { text = await viaProxy(url, t => t.trim().startsWith("{")); }
+  const json = JSON.parse(text);
+  return (json.data?.children || []).map(c => c.data).map(p => {
+    const it = makeItem(p.title, "https://www.reddit.com" + p.permalink, p.created_utc * 1000, "r/Polska", null);
+    if (it) { it.community = true; it.score = p.score; it.comments = p.num_comments; }
+    return it;
+  }).filter(Boolean);
+}
+
+async function fetchWikiArticle(a) {
+  const d = n => { const x = new Date(Date.now() - n * DAY); return x.toISOString().slice(0, 10).replace(/-/g, ""); };
+  const url = "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/pl.wikipedia/all-access/user/" +
+    enc(a.t.replace(/ /g, "_")) + "/daily/" + d(31) + "/" + d(1);
+  const json = JSON.parse(await fetchText(url));
+  const views = (json.items || []).map(i => i.views);
+  if (views.length < 8) return null;
+  const recent = views.slice(-3), base = views.slice(0, -3).sort((x, y) => x - y);
+  const avg = recent.reduce((s, v) => s + v, 0) / recent.length;
+  const median = base[Math.floor(base.length / 2)] || 1;
+  return { ...a, views, avg: Math.round(avg), ratio: avg / median };
+}
+
+/* ================= 상태 ================= */
+
+const state = {
+  items: store.get("kr.items", {}),       // id -> item (방문할 때마다 누적)
+  fetchedAt: store.get("kr.fetchedAt", 0),
+  backlog: store.get("kr.backlog", []),
+  wiki: [],
+  topic: "all", days: 14, strongOnly: true, bothOnly: false, storyBothOnly: false, showClosed: false,
+  limit: 30,
+  status: {}
+};
+
+function mergeItems(list) {
+  const cutoff = Date.now() - KEEP_DAYS * DAY;
+  for (const it of list) {
+    const old = state.items[it.id];
+    // 같은 글이 여러 검색어에 잡히면 가장 이른 시각을 유지
+    if (!old || it.ts < old.ts) state.items[it.id] = old ? { ...old, ts: it.ts } : it;
+  }
+  for (const id of Object.keys(state.items)) if (state.items[id].ts < cutoff) delete state.items[id];
+  store.set("kr.items", state.items);
+}
+const allItems = () => Object.values(state.items).map(it => ({ ...it, topic: classify(it.title, it.topic) }));
+
+/* ================= 이슈 묶기 ================= */
+
+const STOP = new Set("oraz jest jako przez tylko jego jeszcze także może będzie które który która tego temu nowy nowe nowa polska polsce polski korea korei koreą południowa południowej południową koreański koreańska koreańskie koreańskich mówi zobacz wideo po raz nie tak jak dla nad pod czy już się".split(" "));
+function tokens(title) {
+  const set = new Set();
+  for (const w of title.toLowerCase().split(/[^\p{L}\p{N}-]+/u)) {
+    if (w.length < 3 || STOP.has(w)) continue;
+    set.add(/\d/.test(w) ? w : w.slice(0, 6));   // 6글자 절단으로 폴란드어 격변화를 대충 흡수
+  }
+  return set;
+}
+function similar(a, b) {
+  let n = 0;
+  for (const t of a) if (b.has(t)) n++;
+  return n >= 3 && n / Math.min(a.size, b.size) >= 0.5;
+}
+function buildStories(items) {
+  const sorted = items.filter(i => i.strong).sort((a, b) => a.ts - b.ts);
+  const stories = [];
+  for (const it of sorted) {
+    const tk = tokens(it.title);
+    if (tk.size < 3) continue;
+    let home = null;
+    for (const s of stories) {
+      if (it.ts - s.last > 5 * DAY) continue;
+      if (similar(tk, s.tokens)) { home = s; break; }
+    }
+    if (home) { home.items.push(it); home.last = Math.max(home.last, it.ts); }
+    else stories.push({ tokens: tk, items: [it], first: it.ts, last: it.ts });
+  }
+  return stories.map(s => {
+    const outlets = [...new Set(s.items.map(i => i.source))];
+    const counts = {};
+    for (const i of s.items) counts[i.topic] = (counts[i.topic] || 0) + 1;
+    const topic = Object.keys(counts).sort((a, b) => counts[b] - counts[a] || (a === "other") - (b === "other"))[0];
+    const lead = s.items.find(i => !i.community) || s.items[0];
+    const age = ageDays(s.first);
+    return { id: lead.id, title: lead.title, link: lead.link, topic, outlets, items: s.items, first: s.first, last: s.last, age,
+      phase: age <= PRIME_DAYS ? "go" : age <= WINDOW_DAYS ? "soon" : "closed" };
+  });
+}
+
+/* ================= 렌더 ================= */
+
+function setStatus(id, name, s) { state.status[id] = { name, s }; renderStatus(); }
+function renderStatus() {
+  const parts = Object.values(state.status).map(v => `<span class="src ${v.s}"><span class="dot"></span>${esc(v.name)}</span>`);
+  const when = state.fetchedAt ? `<span>마지막 수집 ${esc(rel(state.fetchedAt))}</span>` : "";
+  $("status").innerHTML = when + parts.join("");
+}
+
+function renderKpis(items, stories) {
+  const now = Date.now();
+  const strong = items.filter(i => i.strong);
+  const last7 = strong.filter(i => now - i.ts <= 7 * DAY);
+  const prev7 = strong.filter(i => now - i.ts > 7 * DAY && now - i.ts <= 14 * DAY);
+  const open = stories.filter(s => s.phase !== "closed" && s.outlets.length >= 2);
+  const prime = open.filter(s => s.phase === "go").length;
+  const by = list => { const c = {}; for (const i of list) c[i.topic] = (c[i.topic] || 0) + 1; return c; };
+  const c7 = by(last7), p7 = by(prev7);
+  const hot = Object.keys(c7).filter(k => k !== "other").sort((a, b) => c7[b] - c7[a])[0];
+  const rise = Object.keys(c7).filter(k => k !== "other").map(k => [k, c7[k] - (p7[k] || 0)]).sort((a, b) => b[1] - a[1])[0];
+  const delta = last7.length - prev7.length;
+  const dTxt = prev7.length ? `<span class="${delta >= 0 ? "up" : "down"}">${delta >= 0 ? "+" : ""}${delta}</span> 직전 7일 대비` : "직전 7일 기록 없음";
+  const tile = (label, value, note, text) =>
+    `<div class="kpi"><div class="k-label">${label}</div><div class="k-value${text ? " text" : ""}">${value}</div><div class="k-note">${note}</div></div>`;
+  $("kpis").innerHTML =
+    tile("최근 7일 한국 언급", last7.length, dTxt) +
+    tile("열린 반응 창", open.length, `그중 ${prime}건이 첫 보도 7일 이내`) +
+    tile("가장 많이 다뤄진 토픽", hot ? esc(TOPIC[hot].ko) : "–", hot ? `7일간 ${c7[hot]}건 · ${AUD_LABEL[TOPIC[hot].aud]}` : "아직 데이터 없음", true) +
+    tile("가장 많이 늘어난 토픽", rise && rise[1] > 0 ? esc(TOPIC[rise[0]].ko) : "–", rise && rise[1] > 0 ? `직전 7일보다 +${rise[1]}건` : "늘어난 토픽 없음", true);
+}
+
+function audBadge(topicId) {
+  const a = TOPIC[topicId].aud;
+  return `<span class="aud ${a === "both" ? "both" : ""}">${AUD_LABEL[a]}</span>`;
+}
+
+function renderStories(stories) {
+  $("story-filters").innerHTML =
+    `<button type="button" class="chip ${state.storyBothOnly ? "active" : ""}" data-sf="both">교집합 주제만</button>` +
+    `<button type="button" class="chip ${state.showClosed ? "active" : ""}" data-sf="closed">창이 닫힌 이슈도 보기</button>`;
+  let list = stories.filter(s => state.showClosed || s.phase !== "closed");
+  if (state.storyBothOnly) list = list.filter(s => TOPIC[s.topic].aud === "both");
+  const multi = list.filter(s => s.outlets.length >= 2);
+  // 여러 매체가 다룬 묶음이 부족하면 교집합 주제의 단독 보도로 채움
+  const solo = list.filter(s => s.outlets.length < 2 && TOPIC[s.topic].aud === "both" && s.phase !== "closed");
+  const score = s => s.outlets.length * 3 + s.items.length + (TOPIC[s.topic].aud === "both" ? 3 : 0) - s.age * 0.6;
+  multi.sort((a, b) => score(b) - score(a));
+  solo.sort((a, b) => b.first - a.first);
+  const shown = multi.slice(0, 10).concat(multi.length < 5 ? solo.slice(0, 5 - multi.length) : []);
+  if (!shown.length) {
+    $("stories").innerHTML = `<div class="empty">${Object.keys(state.items).length ? "조건에 맞는 이슈가 없습니다. 필터를 풀어 보세요." : "아직 수집된 헤드라인이 없습니다."}</div>`;
+    return;
+  }
+  const saved = new Set(state.backlog.map(b => b.id));
+  const label = { go: "지금 제작", soon: "마감 임박", closed: "창 닫힘" };
+  $("stories").innerHTML = shown.map(s => {
+    const left = WINDOW_DAYS - s.age;
+    const pct = Math.min(100, Math.round(s.age / WINDOW_DAYS * 100));
+    const links = s.items.filter((i, n, arr) => arr.findIndex(x => x.source === i.source) === n).slice(0, 4)
+      .map(i => `<a href="${esc(i.link)}" target="_blank" rel="noopener">${esc(i.source)}</a>`).join("");
+    const more = s.outlets.length > 4 ? `<span>외 ${s.outlets.length - 4}곳</span>` : "";
+    return `<div class="story">
+      <div class="win">
+        <span class="pill ${s.phase}">${label[s.phase]}</span>
+        <div>D+${s.age} · ${left >= 0 ? left + "일 남음" : Math.abs(left) + "일 지남"}</div>
+        <div class="winbar ${s.phase}"><i style="width:${Math.max(4, pct)}%"></i></div>
+      </div>
+      <div class="body">
+        <a class="s-title" href="${esc(s.link)}" target="_blank" rel="noopener">${esc(s.title)}</a>
+        <div class="s-meta">
+          <span class="tag">${esc(TOPIC[s.topic].ko)}</span>${audBadge(s.topic)}
+          <span>매체 ${s.outlets.length}곳 · 기사 ${s.items.length}건</span>
+          <span>첫 보도 ${esc(mmdd(s.first))}</span>
+        </div>
+        <div class="s-links">${links}${more}</div>
+      </div>
+      <div class="acts">
+        <button type="button" class="btn small ${saved.has(s.id) ? "on" : ""}" data-save="${esc(s.id)}">${saved.has(s.id) ? "담김" : "후보에 담기"}</button>
+        <a class="btn small" style="text-decoration:none" href="https://translate.google.com/?sl=pl&tl=ko&op=translate&text=${enc(s.title)}" target="_blank" rel="noopener">번역</a>
+      </div>
+    </div>`;
+  }).join("");
+  state._stories = Object.fromEntries(stories.map(s => [s.id, s]));
+}
+
+function renderChart(items) {
+  const now = Date.now();
+  const src = items.filter(i => !state.strongOnly || i.strong);
+  const cur = {}, prev = {};
+  for (const i of src) {
+    const a = now - i.ts;
+    if (a <= 7 * DAY) cur[i.topic] = (cur[i.topic] || 0) + 1;
+    else if (a <= 14 * DAY) prev[i.topic] = (prev[i.topic] || 0) + 1;
+  }
+  const rows = TOPICS.filter(t => t.id !== "other").map(t => ({ t, c: cur[t.id] || 0, p: prev[t.id] || 0 })).sort((a, b) => b.c - a.c);
+  const max = Math.max(1, ...rows.map(r => Math.max(r.c, r.p)));
+  // 값 라벨이 들어갈 자리를 남기려고 막대는 트랙의 82%까지만 사용
+  const w = v => (v / max * 82).toFixed(1);
+  $("chart").innerHTML = rows.map(r => {
+    const dim = state.topic !== "all" && state.topic !== r.t.id;
+    return `<button type="button" class="row-label ${state.topic === r.t.id ? "active" : ""}" data-topic="${r.t.id}">${esc(r.t.ko)}</button>
+      <div class="track ${dim ? "dim" : ""}" data-topic="${r.t.id}" title="최근 7일 ${r.c}건 · 직전 7일 ${r.p}건">
+        <div class="bar" style="width:${w(r.c)}%"></div>
+        ${r.p ? `<div class="prev" style="left:${w(r.p)}%"></div>` : ""}
+        <div class="val" style="left:${w(Math.max(r.c, r.p))}%">${r.c}</div>
+      </div>`;
+  }).join("") + `<div class="axis-note">막대 = 최근 7일 · <span class="legend-tick"></span> = 직전 7일</div>`;
+}
+
+function renderDays(items) {
+  const now = new Date(); now.setHours(23, 59, 59, 999);
+  const counts = new Array(30).fill(0);
+  for (const i of items) {
+    if (!i.strong) continue;
+    const d = Math.floor((now - i.ts) / DAY);
+    if (d >= 0 && d < 30) counts[29 - d]++;
+  }
+  const max = Math.max(1, ...counts);
+  $("days").innerHTML = counts.map((c, n) => {
+    const ts = now - (29 - n) * DAY;
+    return `<div class="col ${c ? "" : "zero"}" style="height:${c ? Math.max(4, c / max * 100) : 2}%" title="${mmdd(ts)} · ${c}건"></div>`;
+  }).join("");
+  $("days-axis").innerHTML = `<span>${mmdd(now - 29 * DAY)}</span><span>하루 최대 ${max}건</span><span>${mmdd(+now)}</span>`;
+}
+
+function renderFeed(items) {
+  const chips = [{ id: "all", ko: "전체" }].concat(TOPICS);
+  $("topic-chips").innerHTML = chips.map(t => `<button type="button" class="chip ${state.topic === t.id ? "active" : ""}" data-topic="${t.id}">${esc(t.ko)}</button>`).join("");
+  $("feed-opts").innerHTML =
+    [7, 14, 30].map(d => `<button type="button" class="chip ${state.days === d ? "active" : ""}" data-days="${d}">${d}일</button>`).join("") +
+    `<button type="button" class="chip ${state.strongOnly ? "active" : ""}" data-opt="strong">제목에 한국이 나온 것만</button>` +
+    `<button type="button" class="chip ${state.bothOnly ? "active" : ""}" data-opt="both">교집합 주제만</button>`;
+  const now = Date.now();
+  const list = items.filter(i =>
+    now - i.ts <= state.days * DAY &&
+    (state.topic === "all" || i.topic === state.topic) &&
+    (!state.strongOnly || i.strong) &&
+    (!state.bothOnly || TOPIC[i.topic].aud === "both")
+  ).sort((a, b) => b.ts - a.ts);
+  const saved = new Set(state.backlog.map(b => b.id));
+  if (!list.length) {
+    $("feed").innerHTML = `<div class="empty">${Object.keys(state.items).length ? "조건에 맞는 헤드라인이 없습니다." : "아직 수집된 헤드라인이 없습니다."}</div>`;
+    $("more").hidden = true;
+    return;
+  }
+  state._feed = Object.fromEntries(list.map(i => [i.id, i]));
+  $("feed").innerHTML = list.slice(0, state.limit).map(i => `<div class="headline">
+      <a class="t" href="${esc(i.link)}" target="_blank" rel="noopener">${esc(i.title)}</a>
+      <div class="hl-meta">
+        <span>${esc(i.source)}</span><span>${esc(rel(i.ts))}</span>
+        <span class="tag">${esc(TOPIC[i.topic].ko)}</span>
+        ${i.community ? `<span>추천 ${i.score ?? 0} · 댓글 ${i.comments ?? 0}</span>` : ""}
+        <button type="button" class="linkbtn" data-save-item="${esc(i.id)}">${saved.has(i.id) ? "담김" : "후보에 담기"}</button>
+        <a class="linkbtn" href="https://translate.google.com/?sl=pl&tl=ko&op=translate&text=${enc(i.title)}" target="_blank" rel="noopener">번역</a>
+      </div>
+    </div>`).join("");
+  $("more").hidden = list.length <= state.limit;
+  $("more").textContent = `더 보기 (${list.length - state.limit}건 남음)`;
+}
+
+const STAGES = ["후보", "대본", "제작", "게시"];
+function renderBacklog() {
+  if (!state.backlog.length) {
+    $("backlog").innerHTML = `<div class="empty">아직 담은 이슈가 없습니다. 위 목록에서 “후보에 담기”를 누르면 여기에 마감일과 함께 쌓입니다.</div>`;
+    return;
+  }
+  const rows = state.backlog.slice().sort((a, b) => (a.stage === "게시") - (b.stage === "게시") || a.first - b.first);
+  $("backlog").innerHTML = rows.map(b => {
+    const left = WINDOW_DAYS - ageDays(b.first);
+    const done = b.stage === "게시";
+    const cls = done ? "go" : left < 0 ? "closed" : left <= 7 ? "soon" : "go";
+    const txt = done ? "게시 완료" : left < 0 ? `마감 ${-left}일 지남` : `D-${left}`;
+    return `<div class="bl">
+      <div class="bl-title"><a href="${esc(b.link)}" target="_blank" rel="noopener">${esc(b.title)}</a></div>
+      <div class="bl-row">
+        <span class="pill ${cls}">${txt}</span>
+        <span class="tag">${esc(TOPIC[b.topic]?.ko || "기타")}</span>
+        <label>단계 <select id="stage-${esc(b.id)}" data-stage="${esc(b.id)}">${STAGES.map(s => `<option ${s === b.stage ? "selected" : ""}>${s}</option>`).join("")}</select></label>
+        <button type="button" class="linkbtn" data-remove="${esc(b.id)}">빼기</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function renderWiki() {
+  if (!state.wiki.length) return;
+  const rows = state.wiki.slice().sort((a, b) => b.ratio - a.ratio);
+  $("wiki").innerHTML = rows.map(a => {
+    const max = Math.max(...a.views), min = Math.min(...a.views), span = Math.max(1, max - min);
+    const pts = a.views.map((v, n) => [(2 + n / (a.views.length - 1) * 86).toFixed(1), (21 - (v - min) / span * 18).toFixed(1)]);
+    const end = pts[pts.length - 1];
+    const spike = a.ratio >= 1.8;
+    return `<div class="wk">
+      <a href="https://pl.wikipedia.org/wiki/${enc(a.t.replace(/ /g, "_"))}" target="_blank" rel="noopener">${esc(a.ko)}<span class="pl">${esc(a.t)}</span></a>
+      <svg viewBox="0 0 92 24" role="img" aria-label="30일 조회수 추이"><polyline points="${pts.map(p => p.join(",")).join(" ")}"/><circle cx="${end[0]}" cy="${end[1]}" r="2.2"/></svg>
+      <span class="num">${a.avg.toLocaleString("ko-KR")}/일<br>${spike ? `<span class="pill go">급증 ×${a.ratio.toFixed(1)}</span>` : `×${a.ratio.toFixed(1)}`}</span>
+    </div>`;
+  }).join("");
+}
+
+function renderManual() {
+  $("manual").innerHTML = MANUAL.map(g =>
+    `<div class="links-h">${esc(g.h)}</div><div class="links">${g.links.map(([n, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(n)}</a>`).join("")}</div>`
+  ).join("");
+}
+
+function renderAll() {
+  const items = allItems();
+  const stories = buildStories(items);
+  renderStatus();
+  renderKpis(items, stories);
+  renderStories(stories);
+  renderChart(items);
+  renderDays(items);
+  renderFeed(items);
+  renderBacklog();
+}
+
+/* ================= 동작 ================= */
+
+function toggleSave(entry) {
+  const at = state.backlog.findIndex(b => b.id === entry.id);
+  if (at >= 0) state.backlog.splice(at, 1);
+  else state.backlog.push({ id: entry.id, title: entry.title, link: entry.link, topic: entry.topic, first: entry.first ?? entry.ts, stage: "후보" });
+  store.set("kr.backlog", state.backlog);
+  renderAll();
+}
+
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-topic],[data-days],[data-opt],[data-sf],[data-save],[data-save-item],[data-remove]");
+  if (!el) return;
+  const d = el.dataset;
+  if (d.topic) { state.topic = state.topic === d.topic ? "all" : d.topic; state.limit = 30; }
+  else if (d.days) { state.days = +d.days; state.limit = 30; }
+  else if (d.opt === "strong") state.strongOnly = !state.strongOnly;
+  else if (d.opt === "both") state.bothOnly = !state.bothOnly;
+  else if (d.sf === "both") state.storyBothOnly = !state.storyBothOnly;
+  else if (d.sf === "closed") state.showClosed = !state.showClosed;
+  else if (d.save) { const s = state._stories?.[d.save]; if (s) return toggleSave(s); }
+  else if (d.saveItem) { const i = state._feed?.[d.saveItem]; if (i) return toggleSave(i); }
+  else if (d.remove) { state.backlog = state.backlog.filter(b => b.id !== d.remove); store.set("kr.backlog", state.backlog); }
+  renderAll();
+});
+document.addEventListener("change", e => {
+  const id = e.target.dataset?.stage;
+  if (!id) return;
+  const b = state.backlog.find(x => x.id === id);
+  if (b) { b.stage = e.target.value; store.set("kr.backlog", state.backlog); renderBacklog(); }
+});
+$("more").addEventListener("click", () => { state.limit += 30; renderFeed(allItems()); });
+
+$("theme").addEventListener("click", () => {
+  const root = document.documentElement;
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  store.set("kr.theme", root.dataset.theme);
+});
+{ const t = store.get("kr.theme", null); if (t) document.documentElement.dataset.theme = t; }
+
+async function pool(tasks, size) {
+  let next = 0;
+  await Promise.all(Array.from({ length: size }, async () => { while (next < tasks.length) await tasks[next++](); }));
+}
+
+async function collect() {
+  $("refresh").disabled = true;
+  $("notice").hidden = true;
+  for (const q of QUERIES) setStatus("q." + q.id, q.ko, "pending");
+  setStatus("reddit", "r/Polska", "pending");
+  let ok = 0;
+  const tasks = QUERIES.map(q => async () => {
+    try { mergeItems(await fetchQuery(q)); setStatus("q." + q.id, q.ko, "ok"); ok++; renderAll(); }
+    catch { setStatus("q." + q.id, q.ko, "fail"); }
+  });
+  tasks.push(async () => {
+    try { mergeItems(await fetchReddit()); setStatus("reddit", "r/Polska", "ok"); renderAll(); }
+    catch { setStatus("reddit", "r/Polska", "fail"); }
+  });
+  await pool(tasks, 3);
+  if (ok) { state.fetchedAt = Date.now(); store.set("kr.fetchedAt", state.fetchedAt); }
+  else {
+    $("notice").textContent = Object.keys(state.items).length
+      ? "뉴스 검색을 불러오지 못해 지난 방문 때 저장된 기록을 보여 줍니다. 공개 CORS 프록시가 잠시 막힌 경우가 많으니 몇 분 뒤 새로고침해 보세요."
+      : "뉴스 검색을 불러오지 못했습니다. 공개 CORS 프록시가 잠시 막힌 경우가 많으니 몇 분 뒤 새로고침해 보세요.";
+    $("notice").hidden = false;
+  }
+  renderAll();
+  $("refresh").disabled = false;
+}
+
+async function collectWiki() {
+  setStatus("wiki", "위키백과", "pending");
+  const res = await Promise.allSettled(WIKI.map(fetchWikiArticle));
+  state.wiki = res.filter(r => r.status === "fulfilled" && r.value).map(r => r.value);
+  setStatus("wiki", "위키백과", state.wiki.length ? "ok" : "fail");
+  if (state.wiki.length) renderWiki();
+  else $("wiki").innerHTML = `<div class="empty">조회수를 불러오지 못했습니다.</div>`;
+}
+
+$("refresh").addEventListener("click", () => { collect(); collectWiki(); });
+
+renderManual();
+renderAll();
+const fresh = state.fetchedAt && Date.now() - state.fetchedAt < CACHE_TTL_MIN * 60000;
+if (fresh) { for (const q of QUERIES) state.status["q." + q.id] = { name: q.ko, s: "ok" }; renderStatus(); }
+else collect();
+collectWiki();
+</script>
+</body>
+</html>

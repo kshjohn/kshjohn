@@ -31,6 +31,7 @@ Korean (native) · English (fluent) · Japanese (business) · Mandarin (intermed
 > Applying supply chain thinking in code.
 
 - **[Polska Pulse](./polska-pulse/)** — dashboard tracking current affairs & interests of Poles aged 20–40, with Polish vocabulary notes *(live)*
+- **[Korea Radar](./korea-radar/)** — monitor of Korea coverage in Polish media, with a 14-day response window per story *(live)*
 - **Landed Cost & Tariff Calculator** — HTS-based duty estimator incorporating Section 232 / IEEPA *(in progress)*
 - **Inventory Optimizer** — EOQ, safety stock, and reorder point modeling *(in progress)*
 - **Demand Forecasting Toolkit** — moving-average / exponential-smoothing comparison *(in progress)*
