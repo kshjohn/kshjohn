@@ -291,7 +291,10 @@
 const WINDOW_DAYS = 14;
 const PRIME_DAYS = 7;
 const KEEP_DAYS = 45;          // 로컬 기록 보존 기간
-const CACHE_TTL_MIN = 30;      // 이 시간 안에 다시 열면 재수집하지 않음
+const CACHE_TTL_MIN = 30;
+// GitHub Actions가 3시간마다 갱신하는 수집 결과. 이게 최근 것이면 프록시를 쓰지 않는다.
+const DATA_URL = "https://raw.githubusercontent.com/kshjohn/kshjohn/radar-data/data.json";
+const SNAPSHOT_MAX_AGE_H = 12;      // 이 시간 안에 다시 열면 재수집하지 않음
 
 // aud: both = 20–30대 여성과 30–50대 남성이 둘 다 클릭하는 일상형 사회 이슈
 //      f / m = 한쪽으로 쏠리는 주제, news = 시사성(채널 주제와 거리가 있음)
@@ -451,6 +454,18 @@ async function fetchQuery(query) {
     if (it) out.push(it);
   }
   return out;
+}
+
+// 서버에서 미리 수집해 둔 스냅숏을 읽는다. 없거나 오래됐으면 false.
+async function loadSnapshot() {
+  const json = JSON.parse(await fetchText(DATA_URL + "?t=" + Math.floor(Date.now() / 600000), 12000));
+  if (!json.generatedAt || Date.now() - json.generatedAt > SNAPSHOT_MAX_AGE_H * 3600000) return false;
+  const topicOf = Object.fromEntries(QUERIES.map(q => [q.id, q.topic]));
+  mergeItems((json.items || []).map(i => makeItem(i.title, i.link, i.ts, i.source, topicOf[i.q] ?? null)).filter(Boolean));
+  for (const q of QUERIES) setStatus("q." + q.id, q.ko, json.queries?.[q.id]?.ok ? "ok" : "fail");
+  state.fetchedAt = json.generatedAt;
+  store.set("kr.fetchedAt", state.fetchedAt);
+  return true;
 }
 
 async function fetchReddit() {
@@ -814,8 +829,10 @@ async function collect() {
   $("notice").hidden = true;
   for (const q of QUERIES) setStatus("q." + q.id, q.ko, "pending");
   setStatus("reddit", "r/Polska", "pending");
-  let ok = 0;
-  const tasks = QUERIES.map(q => async () => {
+  let ok = 0, snapshot = false;
+  try { snapshot = await loadSnapshot(); } catch {}
+  if (snapshot) { ok = 1; renderAll(); }
+  const tasks = snapshot ? [] : QUERIES.map(q => async () => {
     try { mergeItems(await fetchQuery(q)); setStatus("q." + q.id, q.ko, "ok"); ok++; renderAll(); }
     catch { setStatus("q." + q.id, q.ko, "fail"); }
   });
@@ -824,8 +841,8 @@ async function collect() {
     catch { setStatus("reddit", "r/Polska", "fail"); }
   });
   await pool(tasks, 3);
-  if (ok) { state.fetchedAt = Date.now(); store.set("kr.fetchedAt", state.fetchedAt); }
-  else {
+  if (ok && !snapshot) { state.fetchedAt = Date.now(); store.set("kr.fetchedAt", state.fetchedAt); }
+  if (!ok) {
     $("notice").textContent = Object.keys(state.items).length
       ? "뉴스 검색을 불러오지 못해 지난 방문 때 저장된 기록을 보여 줍니다. 공개 CORS 프록시가 잠시 막힌 경우가 많으니 몇 분 뒤 새로고침해 보세요."
       : "뉴스 검색을 불러오지 못했습니다. 공개 CORS 프록시가 잠시 막힌 경우가 많으니 몇 분 뒤 새로고침해 보세요.";
