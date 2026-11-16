@@ -20,18 +20,16 @@ const decode = s => s
   .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(+d))
   .replace(/&(\w+);/g, (m, n) => ENT[n] ?? m)
   .trim();
+let retriesLeft = 3;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const tag = (xml, name) => { const m = xml.match(new RegExp(`<${name}[^>]*>([\\s\\S]*?)</${name}>`)); return m ? decode(m[1]) : ""; };
 
 async function fetchQuery(q) {
   const url = "https://news.google.com/rss/search?q=" + encodeURIComponent(q.q + " when:30d") + "&hl=pl&gl=PL&ceid=PL:pl";
-  let res;
-  // Google이 요청이 잦다고 429를 주면 쉬었다가 다시 시도한다
-  for (let attempt = 0; attempt < 3; attempt++) {
-    res = await fetch(url, { headers: { "user-agent": "Mozilla/5.0 (compatible; feed-reader)" }, signal: AbortSignal.timeout(30000) });
-    if (res.status !== 429) break;
-    await sleep(20000 * (attempt + 1));
-  }
+  // Google이 요청이 잦다고 429를 주면 30초 쉬고 한 번 더 시도한다. 실행 전체에서 최대 3번까지만.
+  const get = () => fetch(url, { headers: { "user-agent": "Mozilla/5.0 (compatible; feed-reader)" }, signal: AbortSignal.timeout(30000) });
+  let res = await get();
+  if (res.status === 429 && retriesLeft > 0) { retriesLeft--; await sleep(30000); res = await get(); }
   if (!res.ok) throw new Error("HTTP " + res.status);
   const xml = await res.text();
   if (!xml.includes("<rss")) throw new Error("not an RSS response");
