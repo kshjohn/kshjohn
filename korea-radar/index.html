@@ -225,7 +225,7 @@
 
   <section class="card">
     <h2>지금 받아칠 이슈</h2>
-    <p class="desc">여러 매체가 같은 한국 이슈를 다룬 묶음입니다. 첫 보도일부터 14일이 반응 창이고, 7일 안이면 검색 유입이 가장 큽니다.</p>
+    <p class="desc">여러 매체가 같은 한국 이슈를 다룬 묶음입니다. 기본은 포털·TV·타블로이드 같은 대중 매체 보도만 셉니다. 첫 보도일부터 14일이 반응 창이고, 7일 안이면 검색 유입이 가장 큽니다.</p>
     <div class="filter-row" id="story-filters"></div>
     <div id="stories"><div class="empty">헤드라인을 수집하고 있습니다.</div></div>
   </section>
@@ -315,6 +315,8 @@ const AUD_LABEL = { both: "교집합", f: "여성 쏠림", m: "남성 쏠림", n
 
 // Google 뉴스 폴란드판 검색어. topic은 제목 키워드로 분류가 안 될 때의 기본값.
 const KOREA = '(Korea OR Korei OR koreański OR Koreańczycy)';
+// site: 연산자로 대중 매체를 직접 겨냥하는 검색어를 만든다
+const sites = list => "(" + list.map(d => "site:" + d).join(" OR ") + ")";
 const QUERIES = [
   { id: "general", ko: "한국 일반", topic: null,      q: '"Korea Południowa" OR "Korei Południowej" OR "Koreą Południową" OR Koreańczycy' },
   { id: "demo",    ko: "저출산",    topic: "demo",    q: KOREA + ' (dzietność OR demografia OR "kryzys demograficzny" OR urodzeń)' },
@@ -324,11 +326,32 @@ const QUERIES = [
   { id: "army",    ko: "병역",      topic: "army",    q: KOREA + ' ("służba wojskowa" OR pobór OR "do wojska")' },
   { id: "defense", ko: "방산",      topic: "defense", q: '"czołgi K2" OR K2PL OR "haubice K9" OR "FA-50" OR Hanwha OR "Hyundai Rotem" OR "Homar-K"' },
   { id: "culture", ko: "K-컬처",    topic: "culture", q: '"K-pop" OR "k-drama" OR "koreański serial" OR "koreańskie seriale" OR "Squid Game"' },
-  { id: "biz",     ko: "기업",      topic: "biz",     q: KOREA + ' Polska (inwestycja OR fabryka OR Samsung OR Hyundai OR "LG Energy")' }
+  { id: "biz",     ko: "기업",      topic: "biz",     q: KOREA + ' Polska (inwestycja OR fabryka OR Samsung OR Hyundai OR "LG Energy")' },
+  // 대중 매체 직접 검색
+  { id: "m_portal", ko: "포털",          topic: null, q: KOREA + " " + sites(["onet.pl", "wp.pl", "interia.pl", "gazeta.pl", "o2.pl", "natemat.pl"]) },
+  { id: "m_tv",     ko: "TV·타블로이드", topic: null, q: KOREA + " " + sites(["tvn24.pl", "polsatnews.pl", "rmf24.pl", "radiozet.pl", "fakt.pl", "se.pl"]) },
+  { id: "m_life",   ko: "라이프스타일",  topic: null, q: KOREA + " " + sites(["noizz.pl", "vibez.pl", "pudelek.pl", "glamour.pl", "ofeminin.pl", "wysokieobcasy.pl"]) },
+  { id: "m_biz",    ko: "경제지",        topic: null, q: KOREA + " " + sites(["money.pl", "businessinsider.com.pl", "bankier.pl", "forsal.pl", "rp.pl"]) }
 ];
 
+// 평범한 폴란드 사람이 실제로 보는 매체 (Google 뉴스의 매체명 기준, 소문자 비교).
+// 여기에 없는 매체(방산·해운 전문지, 기업 팬 블로그 등)는 "대중 매체만" 필터에서 빠진다.
+const MASS_OUTLETS = [
+  /* 포털 */        "onet", "\\bwp\\b", "wirtualna polska", "\\bo2\\b", "interia", "gazeta", "wyborcza", "natemat", "noizz", "vibez",
+  /* TV·라디오 */   "tvn", "polsat", "tvp", "rmf", "radio zet", "radiozet", "eska", "polskie radio", "tok fm", "\\bpap\\b",
+  /* 타블로이드 */  "fakt", "super express", "\\bse\\.pl", "pudelek", "plotek", "pomponik", "plejada", "kozaczek",
+  /* 경제 */        "business insider", "money\\.pl", "bankier", "forsal", "rzeczpospolita", "\\brp\\.pl", "dziennik", "puls biznesu",
+  /* 주간지 */      "newsweek", "polityka", "wprost", "do rzeczy",
+  /* 라이프스타일 */ "kobieta", "glamour", "\\belle\\b", "vogue", "cosmopolitan", "ofeminin", "papilot", "wysokie obcasy", "zwierciad", "mamotoja", "parenting",
+  /* 대중 테크·문화 */ "spider", "antyweb", "focus", "national geographic", "filmweb", "komputer [sś]wiat", "geekweek",
+  /* 스포츠 */      "sport\\.pl", "przegl[aą]d sportowy", "sportowe ?fakty", "meczyki",
+  /* 지역지 */      "naszemiasto", "kurier", "express", "g[lł]os ", "nowiny", "echo dnia",
+  /* 커뮤니티 */    "r/polska"
+];
+const MASS_RE = new RegExp(MASS_OUTLETS.join("|"));
+
 // 제목에 한국이 직접 등장하는지 (본문에서만 스치는 기사를 가르는 기준)
-const KOREA_RE = /kore[aiąęoń]|korea[nń]|seul|k-?pop|k-?dram|hanwha|rotem|fa-?50|\bk2\b|k2pl|\bk9\b|homar-?k|samsung|hyundai|squid game|\bbts\b|blackpink|hallyu/;
+const KOREA_RE = /kore[aiąęoń]|korea[nń]|seul|k-?pop|k-?dram|hanwha|rotem|fa-?50|\bk2\b|k2pl|\bk9\b|homar-?k|squid game|\bbts\b|blackpink|hallyu/;
 // K2 산(등반) 뉴스 제외
 const NOISE_RE = /himalaj|karakorum|wspinacz|alpinist|narciar|bielecki|zdobywc|szczyt k2|na k2\b/;
 
@@ -425,7 +448,8 @@ const gnUrl = q => "https://news.google.com/rss/search?q=" + enc(q + " when:30d"
 
 function classify(title, fallback) {
   const t = title.toLowerCase();
-  for (const tp of TOPICS) if (tp.re && tp.re.test(t)) return tp.id;
+  const gadget = /bateri|smartfon|okular|zegar|s[lł]uchawk|laptop|telefon|galaxy/.test(t);
+  for (const tp of TOPICS) if (tp.re && tp.re.test(t) && !(gadget && tp.id === "work")) return tp.id;
   return fallback || "other";
 }
 
@@ -501,7 +525,7 @@ const state = {
   fetchedAt: store.get("kr.fetchedAt", 0),
   backlog: store.get("kr.backlog", []),
   wiki: [],
-  topic: "all", days: 14, strongOnly: true, bothOnly: false, storyBothOnly: false, showClosed: false,
+  topic: "all", days: 14, massOnly: true, strongOnly: true, bothOnly: false, storyBothOnly: false, showClosed: false,
   limit: 30,
   status: {}
 };
@@ -516,7 +540,12 @@ function mergeItems(list) {
   for (const id of Object.keys(state.items)) if (state.items[id].ts < cutoff) delete state.items[id];
   store.set("kr.items", state.items);
 }
-const allItems = () => Object.values(state.items).map(it => ({ ...it, topic: classify(it.title, it.topic) }));
+const allItems = () => Object.values(state.items).map(it => {
+  const low = it.title.toLowerCase();
+  return { ...it, topic: classify(it.title, it.topic), strong: KOREA_RE.test(low), mass: MASS_RE.test(it.source.toLowerCase()) };
+});
+// 화면에 쓰는 목록: "대중 매체만"이 켜져 있으면 전문지를 뺀다
+const viewItems = () => { const all = allItems(); return state.massOnly ? all.filter(i => i.mass) : all; };
 
 /* ================= 이슈 묶기 ================= */
 
@@ -598,6 +627,7 @@ function audBadge(topicId) {
 
 function renderStories(stories) {
   $("story-filters").innerHTML =
+    `<button type="button" class="chip ${state.massOnly ? "active" : ""}" data-opt="mass">대중 매체만</button>` +
     `<button type="button" class="chip ${state.storyBothOnly ? "active" : ""}" data-sf="both">교집합 주제만</button>` +
     `<button type="button" class="chip ${state.showClosed ? "active" : ""}" data-sf="closed">창이 닫힌 이슈도 보기</button>`;
   let list = stories.filter(s => state.showClosed || s.phase !== "closed");
@@ -610,7 +640,7 @@ function renderStories(stories) {
   solo.sort((a, b) => b.first - a.first);
   const shown = multi.slice(0, 10).concat(multi.length < 5 ? solo.slice(0, 5 - multi.length) : []);
   if (!shown.length) {
-    $("stories").innerHTML = `<div class="empty">${Object.keys(state.items).length ? "조건에 맞는 이슈가 없습니다. 필터를 풀어 보세요." : "아직 수집된 헤드라인이 없습니다."}</div>`;
+    $("stories").innerHTML = `<div class="empty">${Object.keys(state.items).length ? "조건에 맞는 이슈가 없습니다. “대중 매체만”을 끄면 전문지 보도까지 보입니다." : "아직 수집된 헤드라인이 없습니다."}</div>`;
     return;
   }
   const saved = new Set(state.backlog.map(b => b.id));
@@ -690,6 +720,7 @@ function renderFeed(items) {
   $("topic-chips").innerHTML = chips.map(t => `<button type="button" class="chip ${state.topic === t.id ? "active" : ""}" data-topic="${t.id}">${esc(t.ko)}</button>`).join("");
   $("feed-opts").innerHTML =
     [7, 14, 30].map(d => `<button type="button" class="chip ${state.days === d ? "active" : ""}" data-days="${d}">${d}일</button>`).join("") +
+    `<button type="button" class="chip ${state.massOnly ? "active" : ""}" data-opt="mass">대중 매체만</button>` +
     `<button type="button" class="chip ${state.strongOnly ? "active" : ""}" data-opt="strong">제목에 한국이 나온 것만</button>` +
     `<button type="button" class="chip ${state.bothOnly ? "active" : ""}" data-opt="both">교집합 주제만</button>`;
   const now = Date.now();
@@ -767,7 +798,7 @@ function renderManual() {
 }
 
 function renderAll() {
-  const items = allItems();
+  const items = viewItems();
   const stories = buildStories(items);
   renderStatus();
   renderKpis(items, stories);
@@ -794,6 +825,7 @@ document.addEventListener("click", e => {
   const d = el.dataset;
   if (d.topic) { state.topic = state.topic === d.topic ? "all" : d.topic; state.limit = 30; }
   else if (d.days) { state.days = +d.days; state.limit = 30; }
+  else if (d.opt === "mass") { state.massOnly = !state.massOnly; state.limit = 30; }
   else if (d.opt === "strong") state.strongOnly = !state.strongOnly;
   else if (d.opt === "both") state.bothOnly = !state.bothOnly;
   else if (d.sf === "both") state.storyBothOnly = !state.storyBothOnly;
@@ -809,7 +841,7 @@ document.addEventListener("change", e => {
   const b = state.backlog.find(x => x.id === id);
   if (b) { b.stage = e.target.value; store.set("kr.backlog", state.backlog); renderBacklog(); }
 });
-$("more").addEventListener("click", () => { state.limit += 30; renderFeed(allItems()); });
+$("more").addEventListener("click", () => { state.limit += 30; renderFeed(viewItems()); });
 
 $("theme").addEventListener("click", () => {
   const root = document.documentElement;

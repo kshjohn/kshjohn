@@ -61,5 +61,8 @@ if (!Object.values(queries).some(q => q.ok)) { console.error("every query failed
 
 const cutoff = Date.now() - KEEP_DAYS * DAY;
 const items = [...byLink.values()].filter(i => i.ts >= cutoff).sort((a, b) => b.ts - a.ts);
+const bySource = {};
+for (const i of items) bySource[i.source] = (bySource[i.source] || 0) + 1;
+console.log("top outlets: " + Object.entries(bySource).sort((a, b) => b[1] - a[1]).slice(0, 40).map(([n, c]) => `${n} ${c}`).join(", "));
 writeFileSync(outPath, JSON.stringify({ generatedAt: Date.now(), queries, items }));
 console.log(`wrote ${items.length} items to ${outPath}`);

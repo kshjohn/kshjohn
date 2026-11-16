@@ -8,6 +8,7 @@ on:
   push:
     paths:
       - "korea-radar/collect.mjs"
+      - "korea-radar/index.html"
       - ".github/workflows/korea-radar.yml"
 
 permissions:
