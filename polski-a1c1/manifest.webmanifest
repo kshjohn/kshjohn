@@ -1,0 +1,27 @@
+{
+  "name": "Polski A1–C1 · 폴란드어 자습실",
+  "short_name": "Polski",
+  "description": "A1부터 C1까지 혼자 익히는 폴란드어 학습 앱 — 단어·7격·어미·문법·훈련·퀴즈·모의고사. 설치하면 오프라인에서도 돌아갑니다.",
+  "lang": "ko",
+  "dir": "ltr",
+  "start_url": ".",
+  "scope": ".",
+  "id": "/polski-a1c1/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "orientation": "portrait-primary",
+  "background_color": "#FCFCFD",
+  "theme_color": "#FCFCFD",
+  "categories": ["education", "books"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "단어 카드", "short_name": "단어", "url": "./#vocab", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "훈련", "short_name": "훈련", "url": "./#train", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "퀴즈", "short_name": "퀴즈", "url": "./#quiz", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
