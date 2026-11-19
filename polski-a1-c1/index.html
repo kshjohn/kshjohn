@@ -26656,6 +26656,10 @@ function vocabDeckList(){
   return `${progressBanner()}<h2 class="sec">단어장</h2>
   <p class="lede">테마를 고르면 카드 학습이 시작됩니다. 카드를 눌러 뜻을 확인하고, <b>알아요 / 헷갈려요</b>로 표시하면 진도에 반영됩니다.
     지금은 <b>${lvLabel()}</b> 범위의 ${decks.length}개 테마 · ${shown}개 단어를 보고 있습니다.</p>
+  <div class="inline" style="margin:-8px 0 14px;gap:10px">
+    <span style="font-size:13px;color:var(--ink-3)">카드 방향</span>
+    <span class="xsteps" style="margin:0">${cardDirBtns(false)}</span>
+    <span style="font-size:12.5px;color:var(--ink-3)">${S.cardDir==="ko"?"한국어 뜻을 보고 폴란드어를 쓰거나 말해서 맞힙니다.":"폴란드어를 보고 뜻을 맞힙니다."}</span></div>
   <input class="search" id="wq" placeholder="${lvLabel()} 단어 ${shown}개 검색 — 폴란드어나 한국어로">
   <div id="qres"></div>
   <div class="grid g3 deckgrid" style="margin-top:16px">
@@ -26959,6 +26963,175 @@ function startDeck(id){
     list:d.w.map(w=>({p:w[0],k:w[1],g:w[2],n:w[3],dko:d.ko}))};
   render();
 }
+/* =======================================================================
+   한국어 → 폴란드어 카드
+   앞면에 한국어 뜻을 보여 주고, 폴란드어를 써서(또는 말해서) 맞히면 카드가 뒤집힌다.
+   예문·활용표처럼 정답이 드러나는 것은 뒤집기 전까지 숨긴다. 진도(알아요/헷갈려요)는 방향과 상관없이 같은 단어에 쌓인다.
+   ======================================================================= */
+function cardDirBtns(short){
+  const d=S.cardDir==="ko"?"ko":"pl";
+  return [["pl",short?"폴→한":"폴란드어 → 한국어"],["ko",short?"한→폴":"한국어 → 폴란드어"]]
+    .map(([k,t])=>`<button class="xstep ${d===k?"on":""}" data-cdir="${k}" title="카드 방향">${t}</button>`).join("");
+}
+/* 정답으로 받는 꼴: 표제어 그대로, 'dziś / dzisiaj' 의 각 갈래, 말줄임표·괄호를 뺀 꼴 */
+function revForms(p){
+  const out=new Set();
+  const add=x=>{ const c=cleanPl(String(x).replace(/…|\.\.\./g," ").replace(/\([^)]*\)/g," ")); if(c)out.add(c); };
+  add(p); String(p).split(/\s*\/\s*/).forEach(add);
+  return [...out];
+}
+/* 같은 뜻으로 실린 다른 표제어 — 동의어를 썼다고 틀렸다 하지 않는다 */
+function revSyn(w){
+  const out=[];
+  ALLWORDS.forEach(x=>{ if(x.p!==w.p&&x.k===w.k)revForms(x.p).forEach(f=>out.push({f,p:x.p})); });
+  return out;
+}
+function revJudge(input,w){
+  const a=cleanPl(input); if(!a)return {v:"empty"};
+  const main=revForms(w.p), syn=revSyn(w);
+  if(main.includes(a))return {v:"ok"};
+  const s=syn.find(x=>x.f===a); if(s)return {v:"syn",p:s.p};
+  if(main.some(m=>stripDia(m)===stripDia(a)))return {v:"dia"};
+  if(main.some(m=>m.length>=4&&lev(foldPl(a),foldPl(m))<=1))return {v:"typo"};
+  return {v:"no"};
+}
+/* 힌트 1단계: 낱말마다 첫 글자와 글자 수 · 2단계: 낱말 앞 절반 */
+function revHint(p,lvl){
+  const base=String(p).split(/\s*\/\s*/)[0].replace(/…/g,"").trim();
+  return base.split(/\s+/).map(wd=>{ const cs=[...wd], half=Math.ceil(cs.length/2);
+    return cs.map((c,i)=>/\p{L}/u.test(c)?((i===0||(lvl>=2&&i<half))?c:"_"):c).join(" "); }).join("   ");
+}
+function revFlash(w){
+  const f=vState.flipped;
+  return `<div class="flash" id="flash">
+    <span class="tag">${gTag(w.g)}</span>
+    ${f?`<button class="speak" data-say="${esc(w.p)}">🔊</button>`:""}
+    ${wImg(w.p)?`<div class="wimg" aria-hidden="true">${wImg(w.p)}</div>`:""}
+    <div class="word" style="font-size:clamp(24px,4.6vw,36px);letter-spacing:-.025em">${esc(w.k)}</div>
+    ${f?`<div class="word pl" style="color:var(--carmine)">${esc(w.p)}</div>${w.n?`<div class="note">${esc(w.n)}</div>`:""}${pluralLine(w)}${komapBox(w.p)}${senseBox(w.p)}${conjBox(w.p)}`
+       :`<div class="note">폴란드어로 뭐라고 할까요?</div>`}
+    <div class="hint">${f?"1 = 알아요 · 2 = 헷갈려요":"아래에 폴란드어로 써 보거나 말해 보세요 · 모르면 카드를 눌러 정답 보기"}</div>
+  </div>`;
+}
+const REV_KEYS=["ą","ć","ę","ł","ń","ó","ś","ź","ż"];
+function revPanel(w){
+  const rr=vState.rr||[0,0];
+  const run=rr[1]?`<span class="mono" style="font-size:12px;color:var(--ink-3)">이 세트 ${rr[0]} / ${rr[1]}</span>`:"";
+  if(vState.flipped){
+    const r=prac.rres||{v:"gave"}, main=String(w.p);
+    const msg={ok:["good","정답입니다"+(r.how==="voice"?" — 말로 맞혔어요":"")],
+      dia:["near","거의 정답 — 발음 구별 부호를 확인하세요"],
+      syn:["good","정답 — 같은 뜻의 "+(r.p||"")+"도 맞습니다. 이 카드의 단어는 "+main],
+      gave:["bad","정답을 확인했습니다"]}[r.v]||["bad","정답을 확인했습니다"];
+    return `<div class="card pad" id="revBox" style="margin-top:12px">
+      <div class="inline" style="justify-content:space-between"><div class="eyebrow">한국어 → 폴란드어</div>${run}</div>
+      <div class="pmsg ${msg[0]}" style="font-size:15px;font-weight:650;margin-top:8px">${esc(msg[1])}</div>
+      ${r.given&&r.v!=="ok"?`<div style="font-size:13.5px;margin-top:4px">쓴 답: <span class="yr">${esc(r.given)}</span> → <b class="pl">${esc(main)}</b></div>`:""}
+      <div class="pact" style="margin-top:10px">
+        <button data-say="${esc(main)}">🔊 다시 듣기</button>
+        ${micOn()?`<button id="revShadow">🎤 따라 말하기</button>`:""}
+      </div>
+      <div class="pheard" id="revHeard"></div>
+      <div style="font-size:12.5px;color:var(--ink-3);margin-top:8px">맞혔으면 <b>알아요(1)</b>, 못 맞혔거나 헷갈렸으면 <b>헷갈려요(2)</b>를 누르세요.</div>
+    </div>`;
+  }
+  const m=prac.rmsg||null, hint=prac.rhint||0;
+  return `<div class="card pad" id="revBox" style="margin-top:12px">
+    <div class="inline" style="justify-content:space-between"><div class="eyebrow">한국어 → 폴란드어 · 폴란드어로 써 보세요</div>${run}</div>
+    <div class="pask" style="margin-top:10px">
+      <input class="search pin" id="revIn" value="${esc(prac.rval||"")}" placeholder="폴란드어로" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <button id="revSub">확인</button></div>
+    <div class="pact">
+      ${REV_KEYS.map(c=>`<button data-rk="${c}" style="min-width:36px;padding:6px 8px" title="${c} 넣기">${c}</button>`).join("")}
+    </div>
+    <div class="pact">
+      ${micOn()?`<button id="revMic">🎤 말로 답하기</button>`:""}
+      <button id="revHint">💡 힌트${hint?` ${hint}/2`:""}</button>
+      <button id="revGive">정답 보기</button>
+    </div>
+    ${hint?`<div class="ptarget" style="margin-top:10px;letter-spacing:.06em">${esc(revHint(w.p,hint))}</div>`:""}
+    <div class="pmsg ${m?m.cls:""}" id="revMsg">${m?esc(m.text):""}</div>
+    <div class="pheard" id="revHeard"></div>
+    <div style="font-size:12.5px;color:var(--ink-3);margin-top:6px">발음 구별 부호(ą, ł …)가 빠지면 거의 정답으로 봅니다. 같은 뜻으로 실린 다른 표제어도 정답입니다.${micOn()?"":" "+esc(micWhy())}</div>
+  </div>`;
+}
+function revReveal(w,res){
+  micStop();
+  prac.rres=res; vState.flipped=true;
+  vState.rr=vState.rr||[0,0]; vState.rr[1]++;
+  if(res.v==="ok"||res.v==="syn"||res.v==="dia")vState.rr[0]++;
+  render(); say(w.p);
+}
+function bindRev(w){
+  const sh=$("#revShadow");
+  if(sh)sh.onclick=async()=>{
+    if(MIC.rec){ micStop(); return; }
+    if(window.speechSynthesis)speechSynthesis.cancel();
+    const target=String(w.p).split(/\s*\/\s*/)[0].replace(/…/g,"");
+    sh.classList.add("rec"); sh.textContent="● 듣는 중…";
+    const {alts,err}=await hear(6000);
+    sh.classList.remove("rec"); sh.textContent="🎤 따라 말하기";
+    const out=$("#revHeard"); if(!out)return;
+    if(!alts.length){ const m=err?micErr(err):{text:"소리가 들리지 않았어요."}; out.innerHTML=`<span class="phint">${esc(m.text)}</span>`; return; }
+    const r=sayBest(target,alts);
+    out.innerHTML=`<div class="pwords">${target.split(/\s+/).map((o,k)=>{const x=r.hit[k];return x==null?esc(o):`<span class="${x?"hw":"mw"}">${esc(o)}</span>`;}).join(" ")}</div>
+      <div class="pline">들린 말: <b>${esc(r.heard)}</b> · 일치 ${Math.round(r.score*100)}% · <span class="${r.score>=MIC_PASS?"okc":"noc"}">${r.score>=MIC_PASS?"통과":"다시 해 보세요"}</span></div>`;
+  };
+  if(vState.flipped)return;
+  const inp=$("#revIn"), msg=$("#revMsg");
+  const setMsg=(cls,text)=>{ prac.rmsg={cls,text}; if(msg){ msg.className="pmsg "+cls; msg.textContent=text; } };
+  inp.oninput=()=>{ prac.rval=inp.value; inp.classList.remove("good","near"); };
+  const submit=()=>{
+    const r=revJudge(inp.value,w);
+    if(r.v==="empty")return setMsg("bad","먼저 폴란드어로 적어 주세요.");
+    if(r.v==="typo"){ inp.classList.add("near"); return setMsg("near","거의 맞았어요 — 철자 한 글자를 확인해 보세요."); }
+    if(r.v==="no"){ prac.rtries=(prac.rtries||0)+1;
+      return setMsg("bad",prac.rtries>=2?"아니에요. 💡 힌트를 보거나 '정답 보기'를 눌러 보세요.":"아니에요 — 다시 해 보세요."); }
+    revReveal(w,{...r,given:inp.value,how:"type"});
+  };
+  $("#revSub").onclick=submit;
+  inp.onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); submit(); } };
+  document.querySelectorAll("[data-rk]").forEach(b=>b.onclick=()=>{
+    const c=b.dataset.rk, s0=inp.selectionStart??inp.value.length, s1=inp.selectionEnd??s0;
+    inp.value=inp.value.slice(0,s0)+c+inp.value.slice(s1); prac.rval=inp.value;
+    inp.focus(); inp.setSelectionRange(s0+1,s0+1);
+  });
+  $("#revHint").onclick=()=>{ prac.rhint=Math.min(2,(prac.rhint||0)+1); prac.rval=inp.value; render(); const n=$("#revIn"); if(n){ n.focus(); n.setSelectionRange(n.value.length,n.value.length); } };
+  $("#revGive").onclick=()=>revReveal(w,{v:"gave",given:inp.value.trim()});
+  const mic=$("#revMic");
+  if(mic)mic.onclick=async()=>{
+    if(MIC.rec){ micStop(); return; }
+    if(window.speechSynthesis)speechSynthesis.cancel();
+    const key=prac.key;
+    mic.classList.add("rec"); mic.textContent="● 듣는 중… 말해 보세요";
+    const out=$("#revHeard"); if(out)out.innerHTML='<span class="phint">…</span>';
+    const {alts,err}=await hear(6000,t=>{ const o=$("#revHeard"); if(o&&t&&prac.key===key)o.innerHTML='<span class="phint">'+esc(t)+'</span>'; });
+    if(prac.key!==key)return;
+    mic.classList.remove("rec"); mic.textContent="🎤 말로 답하기";
+    if(!alts.length){
+      const m=err?micErr(err):{block:false,text:"소리가 들리지 않았어요. 다시 눌러 또렷하게 말해 보세요."};
+      if(m.block){ MIC.blocked=true; MIC.why=m.text; render(); return; }
+      if(out)out.innerHTML=""; return setMsg("bad",m.text);
+    }
+    /* 들린 후보 가운데 정답(또는 같은 뜻 표제어)과 가장 닮은 것 */
+    const cands=revForms(w.p).map(f=>({f,syn:null})).concat(revSyn(w).map(x=>({f:x.f,syn:x.p})));
+    let best={score:0};
+    cands.forEach(c=>{ const r=sayBest(c.f,alts); if(r.score>best.score)best={...r,syn:c.syn}; });
+    if(best.score>=MIC_PASS){ revReveal(w,{v:best.syn?"syn":"ok",p:best.syn,given:best.heard,how:"voice"}); return; }
+    if(out)out.innerHTML=`<div class="pline">들린 말: <b>${esc(best.heard||alts[0])}</b></div>`;
+    setMsg("bad","아직 아니에요 — 다시 말해 보거나 💡 힌트를 보세요.");
+  };
+  if(!prac.rfocused){ prac.rfocused=true; setTimeout(()=>{ const n=$("#revIn"); if(n&&document.activeElement===document.body)n.focus(); },0); }
+}
+/* 카드 방향 바꾸기 — 단어장 목록과 학습 화면 어디서 눌러도 */
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-cdir]"); if(!b)return;
+  e.stopPropagation();
+  if((S.cardDir==="ko"?"ko":"pl")===b.dataset.cdir)return;
+  S.cardDir=b.dataset.cdir; save();
+  micStop(); koAbort(); prac=pracNew(""); vState.flipped=false; render();
+},true);
+
 function vocabStudy(v){
   const dk=DECKS.find(d=>d.id===vState.deck);
   const title=vState.deck==="__review"?"복습 세트"
@@ -26999,11 +27172,14 @@ function vocabStudy(v){
     prac.exIdx=pool.length?pool[Math.floor(Math.random()*pool.length)]:-1;
   }
   const exs=prac.exs||[], exPick=exs[prac.exIdx]||null;
-  const open=pracOpen(!!exPick);
+  const rev=S.cardDir==="ko";                    /* 한국어 → 폴란드어 카드 */
+  const hideAns=rev&&!vState.flipped;            /* 정답(폴란드어)이 드러나는 것은 뒤집기 전까지 숨긴다 */
+  const open=rev?vState.flipped:pracOpen(!!exPick);
   v.innerHTML=`
   <div class="inline" style="margin:22px 0 12px">
     <button class="icon-btn" id="back">← 단어장</button>
     <b style="font-size:15px">${title}</b>
+    <span class="xsteps" style="margin:0">${cardDirBtns(true)}</span>
     <span class="vnav">
       <button class="icon-btn" id="vPrev" ${i===0?"disabled":""} title="이전 단어 (←)" aria-label="이전 단어">◀</button>
       <button class="icon-btn" id="vNext" title="표시하지 않고 다음 단어로 (→)" aria-label="넘기기"><span class="vnav-t">넘기기 </span>▶</button>
@@ -27011,21 +27187,22 @@ function vocabStudy(v){
     </span>
   </div>
   <div class="bar" style="margin-bottom:14px"><i style="width:${Math.round(i/L.length*100)}%"></i></div>
-  <div class="flash" id="flash">
+  ${rev?revFlash(w):`<div class="flash" id="flash">
     <span class="tag">${gTag(w.g)}</span>
     <button class="speak" data-say="${esc(w.p)}">🔊</button>
     <div class="word">${esc(w.p)}</div>
     ${vState.flipped?`${wImg(w.p)?`<div class="wimg" aria-hidden="true">${wImg(w.p)}</div>`:""}<div class="ko">${esc(w.k)}</div>${w.n?`<div class="note">${esc(w.n)}</div>`:""}${pluralLine(w)}${komapBox(w.p)}${senseBox(w.p)}${conjBox(w.p)}`:""}
     <div class="hint">${vState.flipped?"1 = 알아요 · 2 = 헷갈려요":"아래에서 뜻을 맞혀 보세요 · 모르면 카드를 눌러 뜻 보기"}</div>
-  </div>
-  ${pracPanel(w,exPick)}
-  ${exs.length?`<div class="card pad" id="exList" style="margin-top:12px">
+  </div>`}
+  ${rev?revPanel(w):pracPanel(w,exPick)}
+  ${hideAns?`<div class="card pad" id="exList" style="margin-top:12px"><div style="font-size:13px;color:var(--ink-3)">예문에는 정답(폴란드어)이 들어 있어서 답을 확인한 뒤에 보여 드립니다.</div></div>`
+  :exs.length?`<div class="card pad" id="exList" style="margin-top:12px">
       <div class="eyebrow" style="margin-bottom:10px">예문 ${exs.filter(e=>!e.gen).length}개${exs.some(e=>e.gen)?` · 문형 연습 ${exs.filter(e=>e.gen).length}개`:""}${vState.flipped?"":" · 한국어 해석은 카드를 뒤집으면 보입니다"}</div>
       ${exs.map((e,k)=>`${e.gen&&(k===0||!exs[k-1].gen)?`<div class="exgen-h">문형 연습 — 격·어미를 보여 주려고 틀에 맞춰 자동으로 만든 문장입니다. 실제로 어떻게 쓰이는지는 위 예문과 아래 말뭉치 링크로 보세요.</div>`:""}<div class="ex" style="--cc:var(--c${e.cc||5})">
         <div class="s">${markUpCases(e.pl,e.marks)}
           <button class="spk" data-say="${esc(e.pl)}">🔊</button></div>
         <div class="t">${vState.flipped?esc(e.ko):""}
-          ${k===prac.exIdx?`<span class="chip" style="${vState.flipped?"margin-left:6px;":""}color:var(--carmine);border-color:color-mix(in srgb,var(--carmine) 40%,transparent)">따라 쓰기</span>`:""}
+          ${k===prac.exIdx&&!rev?`<span class="chip" style="${vState.flipped?"margin-left:6px;":""}color:var(--carmine);border-color:color-mix(in srgb,var(--carmine) 40%,transparent)">따라 쓰기</span>`:""}
           ${e.gen
             ? `<span class="chip" style="margin-left:6px;color:var(--c${e.cc||5});border-color:color-mix(in srgb,var(--c${e.cc||5}) 40%,transparent)">${esc(e.tag)}</span>`
             : `${senseOf(w.p,e.pl)>=0?`<span class="chip sense-chip">뜻: ${esc(SENSES[w.p].s[senseOf(w.p,e.pl)][0])}</span>`:""}${
@@ -27037,15 +27214,15 @@ function vocabStudy(v){
     <button class="btn know" id="know" ${open?"":"disabled"}>알아요</button>
     <button class="btn dunno" id="dunno" ${open?"":"disabled"}>헷갈려요</button>
   </div>
-  ${drillBox(w)}`;
-  $("#flash").onclick=()=>{if(!vState.flipped){vState.flipped=true;render();}};
+  ${hideAns?"":drillBox(w)}`;
+  $("#flash").onclick=()=>{if(!vState.flipped){ if(rev)revReveal(w,{v:"gave"}); else {vState.flipped=true;render();} }};
   $("#back").onclick=()=>{micStop();koAbort();vState.deck=null;render();};
   $("#know").onclick=()=>mark(true);
   $("#vPrev").onclick=()=>vGo(-1);
   $("#vNext").onclick=()=>vGo(1);
   $("#dunno").onclick=()=>mark(false);
-  bindPrac(w,exPick);
-  bindDrill(w);
+  if(rev)bindRev(w); else bindPrac(w,exPick);
+  if(!hideAns)bindDrill(w);
   function mark(k){micStop();koAbort();S.known[w.p]=k;S.seen[w.p]=1;save();vState.i++;vState.flipped=false;prac=pracNew("");render();}
 }
 /* ---- 따라 읽기 · 따라 쓰기 · 뜻 맞히기 ----
@@ -27716,7 +27893,9 @@ function vGo(d){
 document.addEventListener("keydown",e=>{
   if(route!=="vocab"||!vState.deck)return;
   if(e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA"||e.target.isContentEditable)return;
-  if(e.code==="Space"){e.preventDefault();if(!vState.flipped){vState.flipped=true;render();}}
+  if(e.code==="Space"){e.preventDefault();if(!vState.flipped){
+    if(S.cardDir==="ko"){ const L=vState.list, w=L&&L[Math.min(vState.i,L.length-1)]; if(w)revReveal(w,{v:"gave"}); }
+    else {vState.flipped=true;render();}}}
   if(vState.flipped&&(e.key==="1"))$("#know")&&$("#know").click();
   if(vState.flipped&&(e.key==="2"))$("#dunno")&&$("#dunno").click();
   if(e.key==="ArrowRight"&&vState.i<vState.list.length){e.preventDefault();vGo(1);}
