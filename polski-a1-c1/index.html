@@ -29237,6 +29237,110 @@ function odmPart(v){
 }
 
 /* ---- 어미 채우기 훈련 ---- */
+/* =======================================================================
+   격 도움말 — "여성 · 여격"만 보고는 감이 안 오므로, 그 격이 하는 일과 같이 나오는 말,
+   그리고 성·수마다 하나씩 예문 6개(해석 포함)를 붙인다. 어미 채우기·격 채우기 훈련이 함께 쓴다.
+   예문 한 줄 = {s:성·수 칸, pl:"…|형용사|…", ko:"…{A}…", a:원래 형용사의 한국어}
+   ======================================================================= */
+const SLOT_KEYS=["mi","ma","f","n","pp","po"];
+const SLOT_NOTE={mi:"dom, stół, telefon 같은 사물",ma:"kot, pies, brat 같은 사람·동물",
+  f:"대부분 -a 로 끝남: kawa, książka …",n:"-o · -e · -ę 로 끝남: okno, morze, imię …",
+  pp:"남자가 한 명이라도 있는 사람 무리: studenci, koledzy …",po:"사물·동물·여자들: domy, koty, kobiety …"};
+const CASE_HELP={
+  1:{role:"문장의 <b>주어</b>입니다 — 한국어 '~이/가, ~은/는'. 사전에 실리는 기본형이고, <b>być</b> 뒤 서술 형용사(Dom jest duży)도 주격입니다.",
+     preps:[],verbs:["być (+ 형용사)","to jest / to są"],other:"주어 자리, 사전 기본형"},
+  2:{role:"<b>'~의'</b>(소유), <b>부정문의 목적어</b>(Nie mam czasu), <b>'~이 없다'</b>(Nie ma …), 수량(5 이상·dużo·kilka) 뒤, 그리고 가장 많은 전치사 뒤에 옵니다.",
+     preps:["do (~로)","od (~부터)","z (~에서)","bez (~ 없이)","dla (~를 위해)","u (~네 집에)","obok · koło (~ 옆에)","podczas (~ 동안)","według (~에 따르면)","oprócz (~ 말고)"],
+     verbs:["szukać","potrzebować","słuchać","uczyć się","bać się","używać","życzyć"],other:"nie ma / nie mam · dużo · mało · kilka · pięć … · szklanka · kilogram"},
+  3:{role:"<b>받는 사람 '~에게, ~한테'</b>입니다. 느낌·상태를 겪는 사람도 여격으로 씁니다: <span class='pl'>Zimno mi</span> 나는 춥다 · <span class='pl'>Podoba mi się</span> 마음에 든다.",
+     preps:["dzięki (~ 덕분에)","przeciwko (~에 반대해)","ku (~ 쪽으로)","wbrew (~에도 불구하고)"],
+     verbs:["dawać / dać","pomagać","dziękować","mówić","pokazywać","kupować (komuś)","ufać","przeszkadzać","podobać się","smakować"],other:"zimno mi · przykro mi · wszystko mi jedno"},
+  4:{role:"<b>직접 목적어 '~을/를'</b>입니다. 방향 <b>na · w (~로)</b>, 시점·기간 <b>w piątek · przez tydzień · na tydzień</b>에도 씁니다. 남성 사물은 주격과, 남성 사람·동물은 속격과 꼴이 같습니다.",
+     preps:["na (~로, ~하러)","w (~ 안으로 · 요일)","przez (~를 통해 · 동안)","za (~ 후에 · ~ 대신)","o (~를 청하다)"],
+     verbs:["mieć","lubić","kochać","znać","widzieć","kupować","czytać","jeść","pić","robić","prosić o","czekać na","pytać o"],other:"부정문이 되면 속격으로 바뀝니다 — Mam czas → Nie mam czasu"},
+  5:{role:"<b>수단 '~로'</b>(autobusem 버스로), <b>함께 '~와'</b>(z + 조격), <b>신분·직업 '~이다'</b>(Jestem studentem), <b>위치 '~ 위·아래·앞·뒤·사이'</b>에 씁니다.",
+     preps:["z (~와 함께)","nad (~ 위에)","pod (~ 아래에)","przed (~ 앞에)","za (~ 뒤에)","między (~ 사이에)"],
+     verbs:["być","zostać","interesować się","zajmować się","opiekować się","kierować","jechać (pociągiem)"],other:"직업·신분: Jestem nauczycielem"},
+  6:{role:"<b>장소 '~에서, ~에'</b>와 <b>화제 '~에 대해'</b>입니다. 혼자서는 쓰지 않고 <b>반드시 전치사와 함께</b> 나옵니다.",
+     preps:["w (~ 안에서)","na (~ 위에서 · ~에서)","o (~에 대해)","po (~ 후에 · 여기저기)","przy (~ 곁에)"],
+     verbs:["mieszkać w","pracować w / na","myśleć o","mówić o","marzyć o","rozmawiać o"],other:"자음이 바뀌는 일이 많습니다 — miasto → w mieście, stół → na stole"},
+  7:{role:"사람(이나 동물)을 <b>부를 때</b>입니다 — 한국어 '~야, ~씨, ~님'. 편지 첫머리와 격식 있는 호칭에서 특히 살아 있습니다. 복수는 주격과 같습니다.",
+     preps:[],verbs:[],other:"Szanowny Panie · Drogi Marku · Kochana mamo — 호칭 형용사도 함께 호격"}
+};
+const CASE_EX={
+  1:[{s:"mi",pl:"Ten |nowy| telefon leży na stole.",ko:"이 {A} 전화기가 탁자 위에 있다.",a:"새"},
+     {s:"ma",pl:"Mój |stary| pies śpi cały dzień.",ko:"우리 {A} 개는 하루 종일 잔다.",a:"늙은"},
+     {s:"f", pl:"Ta |mała| kawiarnia jest bardzo popularna.",ko:"이 {A} 카페는 인기가 아주 많다.",a:"작은"},
+     {s:"n", pl:"|Nowe| mieszkanie jest blisko centrum.",ko:"{A} 집은 시내에서 가깝다.",a:"새"},
+     {s:"pp",pl:"|Młodzi| studenci czekają na autobus.",ko:"{A} 학생들이 버스를 기다린다.",a:"젊은"},
+     {s:"po",pl:"|Tanie| bilety są już wyprzedane.",ko:"{A} 표는 벌써 매진됐다.",a:"싼"}],
+  2:[{s:"mi",pl:"Szukam |taniego| hotelu w centrum.",ko:"시내에서 {A} 호텔을 찾고 있다. (szukać + 속격)",a:"싼"},
+     {s:"ma",pl:"To jest miska dla |małego| psa.",ko:"이건 {A} 개를 위한 그릇이다. (dla + 속격)",a:"작은"},
+     {s:"f", pl:"Nie mam |dobrej| mapy.",ko:"{A} 지도가 없다. (부정문 → 속격)",a:"좋은"},
+     {s:"n", pl:"Idę do |nowego| kina.",ko:"{A} 영화관에 간다. (do + 속격)",a:"새"},
+     {s:"pp",pl:"Słucham |starszych| kolegów.",ko:"{A} 동료들의 말을 듣는다. (słuchać + 속격)",a:"나이 많은"},
+     {s:"po",pl:"Potrzebuję |nowych| butów.",ko:"{A} 신발이 필요하다. (potrzebować + 속격)",a:"새"}],
+  3:[{s:"mi",pl:"Przyglądam się |nowemu| budynkowi.",ko:"{A} 건물을 자세히 들여다본다. (przyglądać się + 여격)",a:"새"},
+     {s:"ma",pl:"Daję jedzenie |głodnemu| kotu.",ko:"{A} 고양이에게 먹이를 준다. (dawać + 여격)",a:"배고픈"},
+     {s:"f", pl:"Pomagam |starszej| sąsiadce.",ko:"{A} 이웃 아주머니를 돕는다. (pomagać + 여격)",a:"나이 드신"},
+     {s:"n", pl:"Kupiłem prezent |małemu| dziecku.",ko:"{A} 아이에게 선물을 사 주었다.",a:"어린"},
+     {s:"pp",pl:"Dziękuję |nowym| pracownikom.",ko:"{A} 직원들에게 감사드립니다. (dziękować + 여격)",a:"새"},
+     {s:"po",pl:"Dzięki |dobrym| radom zdałem egzamin.",ko:"{A} 조언 덕분에 시험에 붙었다. (dzięki + 여격)",a:"좋은"}],
+  4:[{s:"mi",pl:"Kupiłem |nowy| samochód.",ko:"{A} 차를 샀다. (남성 사물 → 주격과 같은 꼴)",a:"새"},
+     {s:"ma",pl:"Mam |małego| psa.",ko:"{A} 개를 키운다. (남성 동물 → 속격과 같은 꼴)",a:"작은"},
+     {s:"f", pl:"Piję |gorącą| herbatę.",ko:"{A} 차를 마신다.",a:"뜨거운"},
+     {s:"n", pl:"Wynajmuję |duże| mieszkanie.",ko:"{A} 집을 빌려 산다.",a:"큰"},
+     {s:"pp",pl:"Znam tych |miłych| studentów.",ko:"그 {A} 학생들을 안다. (남성인간 복수 → 속격과 같은 꼴)",a:"친절한"},
+     {s:"po",pl:"Czekam na |ważne| wiadomości.",ko:"{A} 소식을 기다린다. (czekać na + 대격)",a:"중요한"}],
+  5:[{s:"mi",pl:"Piszę |czarnym| długopisem.",ko:"{A} 볼펜으로 쓴다. (수단)",a:"검은"},
+     {s:"ma",pl:"Rozmawiam z |miłym| sąsiadem.",ko:"{A} 이웃 아저씨와 이야기한다. (z + 조격)",a:"친절한"},
+     {s:"f", pl:"Ona jest |dobrą| lekarką.",ko:"그녀는 {A} 의사다. (być + 조격)",a:"좋은"},
+     {s:"n", pl:"Mieszkamy nad |małym| jeziorem.",ko:"우리는 {A} 호숫가에 산다. (nad + 조격)",a:"작은"},
+     {s:"pp",pl:"Pracuję z |polskimi| inżynierami.",ko:"{A} 엔지니어들과 일한다. (z + 조격)",a:"폴란드의"},
+     {s:"po",pl:"Interesuję się |nowymi| technologiami.",ko:"{A} 기술에 관심이 있다. (interesować się + 조격)",a:"새로운"}],
+  6:[{s:"mi",pl:"Książka leży na |starym| stole.",ko:"책이 {A} 탁자 위에 있다. (na + 전치격)",a:"오래된"},
+     {s:"ma",pl:"Ciągle myślę o |młodszym| bracie.",ko:"{A} 남동생 생각을 자주 한다. (myśleć o + 전치격)",a:"어린"},
+     {s:"f", pl:"Pracuję w |międzynarodowej| firmie.",ko:"{A} 회사에서 일한다. (w + 전치격)",a:"국제적인"},
+     {s:"n", pl:"Mieszkam w |dużym| mieście.",ko:"{A} 도시에 산다. (miasto → mieście)",a:"큰"},
+     {s:"pp",pl:"Rozmawialiśmy o |nowych| pracownikach.",ko:"{A} 직원들에 대해 이야기했다. (o + 전치격)",a:"새"},
+     {s:"po",pl:"Byłem na |ciekawych| wykładach.",ko:"{A} 강의들을 들었다. (na + 전치격)",a:"흥미로운"}],
+  7:[{s:"",pl:"|Mamo|, gdzie jesteś?",ko:"엄마, 어디 있어요?"},
+     {s:"",pl:"Dzień dobry, |panie profesorze|!",ko:"교수님, 안녕하세요!"},
+     {s:"",pl:"|Aniu|, chodź tutaj!",ko:"아니아, 이리 와!"},
+     {s:"",pl:"Dziękuję, |Kasiu|!",ko:"고마워, 카샤!"},
+     {s:"",pl:"Cześć, |Piotrze|!",ko:"안녕, 피오트르!"},
+     {s:"",pl:"Szanowni |Państwo|!",ko:"신사 숙녀 여러분! (편지·연설 첫머리)"}]
+};
+const koAdjOf=a=>String(a.ko).split(/[;,]/)[0].trim();
+/* 예문의 |…| 자리에 형태를 넣는다. 문장 첫머리면 대문자로 */
+function exPut(pl,form){ const at0=pl.indexOf("|")===0; const f=at0?cap(form):form; return pl.replace(/\|[^|]+\|/,f); }
+function exHtml(pl,form,cc){
+  const at0=pl.indexOf("|")===0, m=pl.match(/\|([^|]+)\|/), f=form==null?(m?m[1]:""):(at0?cap(form):form);
+  const [a,b]=pl.split(/\|[^|]+\|/);
+  return esc(a)+`<b style="color:var(--c${cc})">${esc(f)}</b>`+esc(b||"");
+}
+const exKo=(e,koA)=>e.a?e.ko.replace("{A}",koA==null?e.a:koA):e.ko;
+/* 도움말 카드. slot: 지금 문제의 성·수 칸(강조), open: 예문을 펼쳐 둘지 */
+function caseHelp(ci,slot,open){
+  const h=CASE_HELP[ci], c=CASES[ci-1], ex=CASE_EX[ci]||[];
+  const chips=a=>a.map(x=>`<span class="chip" style="font-family:var(--font-pl);font-weight:600;color:var(--ink-2)">${esc(x)}</span>`).join("");
+  return `<div class="card pad" style="margin-top:12px;--cc:var(--c${ci})">
+    <div class="eyebrow" style="color:var(--c${ci})">${c.ko} · ${c.pl} — 이 격이 하는 일</div>
+    <p style="margin:8px 0 6px;font-size:14.5px;line-height:1.75;color:var(--ink-2)">${h.role}</p>
+    <div style="font-size:13px;color:var(--ink-3)">묻는 말 <span class="pl" style="color:var(--ink-2);font-weight:600">${esc(c.q)}</span></div>
+    ${slot?`<div style="font-size:13px;color:var(--ink-3);margin-top:2px">이 문제의 칸 <b style="color:var(--ink-2)">${ADJCOLS[SLOT_KEYS.indexOf(slot)]}</b> — ${esc(SLOT_NOTE[slot])}</div>`:""}
+    ${h.preps.length||h.verbs.length||h.other?`<div class="eyebrow" style="margin-top:14px">같이 나오는 말</div>`:""}
+    ${h.preps.length?`<div style="font-size:12.5px;color:var(--ink-3);margin-top:6px">전치사</div><div class="chip-row" style="margin-top:4px">${chips(h.preps)}</div>`:""}
+    ${h.verbs.length?`<div style="font-size:12.5px;color:var(--ink-3);margin-top:8px">동사</div><div class="chip-row" style="margin-top:4px">${chips(h.verbs)}</div>`:""}
+    ${h.other?`<div style="font-size:13px;color:var(--ink-2);margin-top:8px">${esc(h.other)}</div>`:""}
+    <details class="model" ${open?"open":""}><summary>예문 ${ex.length}개${ci<7?" — 성·수마다 하나씩":""}${open?"":" (풀기 전에 보면 힌트가 됩니다)"}</summary>
+      ${ex.map(e=>{const on=slot&&e.s===slot;
+        return `<div class="ex" style="--cc:var(--c${ci});${on?"background:color-mix(in srgb,var(--c"+ci+") 8%,transparent);border-radius:10px;padding-left:10px;padding-right:10px":""}">
+        <div class="s pl" style="font-size:16.5px">${exHtml(e.pl,null,ci)} <button class="spk" data-say="${esc(e.pl.replace(/\|/g,""))}">🔊</button></div>
+        <div class="t">${esc(exKo(e))}${e.s?` <span class="chip" style="margin-left:6px${on?";color:var(--c"+ci+");border-color:var(--c"+ci+")":""}">${ADJCOLS[SLOT_KEYS.indexOf(e.s)]}${on?" · 이 문제":""}</span>`:""}</div></div>`;}).join("")}
+    </details></div>`;
+}
+
 function makeOdmQ(){
   const on=["verb","adj"].concat(lvOK("B2")?["part"]:[]).filter(k=>oState.kinds[k]);
   if(!on.length)return null;
@@ -29289,9 +29393,11 @@ function makeOdmQ(){
     const alt=new Set(); keys.forEach(k=>t[k].forEach(f=>alt.add(f)));
     const d=distractors([...alt],ans,3);
     if(d.length<3)continue;
-    return {kind:"adj", stem:`${ad.base} — ${ADJCOLS[ki]} · ${CASES[ci].ko}`,
+    const fr=(CASE_EX[ci+1]||[]).find(e=>e.s===keys[ki]);
+    return {kind:"adj", stem:`${ADJCOLS[ki]} · ${CASES[ci].ko} — 빈칸에 맞는 형태는?`,
       word:ad.base, ko:ad.ko, ans, opts:shuffle([ans,...d]),
-      note:`${ad.base} (${ad.ko}) · ${ADJCOLS[ki]} ${CASES[ci].ko} = ${ans}`, say:ans, cc:ci+1};
+      note:`${ad.base} (${ad.ko}) · ${ADJCOLS[ki]} ${CASES[ci].ko} = ${ans}`,
+      say:fr?exPut(fr.pl,ans):ans, cc:ci+1, ci:ci+1, slot:keys[ki], fr, row:keys.map(k=>t[k][ci]), koA:koAdjOf(ad)};
   }
   return null;
 }
@@ -29314,12 +29420,16 @@ function odmDrill(v){
   </div>
   ${!q?`<div class="card pad"><p class="lede" style="margin:0">연습할 품사를 하나 이상 골라 주세요.</p></div>`
   :`<div class="card pad" style="--cc:var(--c${q.cc||5})">
-    <div class="qstem">${esc(q.stem)}</div>
-    <div class="qword small pl">${esc(q.word)}</div>
-    <div style="margin:-16px 0 22px;color:var(--ink-3);font-size:14px">${esc(q.ko)}</div>
+    <div class="qstem">${q.kind==="adj"?`<span style="color:var(--c${q.ci});font-weight:700">${esc(q.stem)}</span>`:esc(q.stem)}</div>
+    ${q.kind==="adj"&&q.fr?`<div class="qword small pl" style="margin-bottom:10px">${esc(q.fr.pl.split(/\|[^|]+\|/)[0])}<span style="display:inline-block;min-width:110px;border-bottom:2px solid var(--c${q.ci});margin:0 4px">&nbsp;</span>${esc(q.fr.pl.split(/\|[^|]+\|/)[1]||"")}</div>
+      <div style="margin:0 0 6px;color:var(--ink-2);font-size:14.5px">${esc(exKo(q.fr,q.koA))}</div>
+      <div style="margin:0 0 22px;color:var(--ink-3);font-size:13.5px">빈칸에 넣을 말: <span class="pl" style="font-weight:650;color:var(--ink)">${esc(q.word)}</span> (${esc(q.ko)})</div>`
+    :`<div class="qword small pl">${esc(q.word)}</div>
+    <div style="margin:-16px 0 22px;color:var(--ink-3);font-size:14px">${esc(q.ko)}</div>`}
     <div class="opts">${q.opts.map((o,i)=>`<button data-o="${i}"><span class="k">${i+1}</span>
       <span class="pl" style="font-size:17px;font-weight:600">${esc(o)}</span></button>`).join("")}</div>
-    <div id="ofb"></div></div>`}`;
+    <div id="ofb"></div></div>
+    ${q.kind==="adj"?`<div id="ohelp">${caseHelp(q.ci,q.slot,false)}</div>`:""}`}`;
   $("#oback").onclick=()=>{oState.mode=null;render();window.scrollTo(0,0);};
   v.querySelectorAll("[data-ok]").forEach(b=>{
     const go=()=>{oState.kinds[b.dataset.ok]=!oState.kinds[b.dataset.ok];oState.cur=null;render();};
@@ -29336,12 +29446,16 @@ function odmDrill(v){
     $("#ofb").innerHTML=`<div class="qfeed ${ok?"ok":"no"}">
       <div style="font-weight:700;color:${ok?"var(--good)":"var(--bad)"};margin-bottom:4px">
         ${ok?"정답":"오답 — 정답은 "+esc(q.ans)}</div>
+      ${q.kind==="adj"&&q.fr?`<div class="pl" style="font-size:17px;margin:2px 0 4px">${exHtml(q.fr.pl,q.ans,q.ci)}</div>
+        <div style="font-size:13.5px;color:var(--ink-3);margin-bottom:8px">${esc(exKo(q.fr,q.koA))}</div>`:""}
       <b>${esc(q.note)}</b>
+      ${q.kind==="adj"?`<div style="font-size:13px;color:var(--ink-3);margin-top:8px">${esc(q.word)}의 ${CASES[q.ci-1].ko} — ${SLOT_KEYS.map((k,i)=>`${ADJCOLS[i]} <span class="pl" style="font-weight:${k===q.slot?700:600};color:${k===q.slot?`var(--c${q.ci})`:"var(--ink-2)"}">${esc(q.row[i])}</span>`).join(" · ")}</div>`:""}
       <div class="inline" style="margin-top:12px">
         <button class="btn" id="onext">다음 →</button>
         <button class="icon-btn" data-say="${esc(q.say)}">🔊 듣기</button>
         <button class="icon-btn" id="osee">이 단어 전체 표 보기</button>
       </div></div>`;
+    if(q.kind==="adj"&&$("#ohelp"))$("#ohelp").innerHTML=caseHelp(q.ci,q.slot,true);
     const nx=()=>{document.removeEventListener("keydown",h);oState.cur=null;render();};
     $("#onext").onclick=nx;
     $("#osee").onclick=()=>{document.removeEventListener("keydown",h);
@@ -29864,6 +29978,8 @@ function trainTable(v){
 }
 
 /* ---- 모드 B: 격 채우기 ---- */
+/* 명사 → 도움말의 성·수 칸 */
+const nounSlot=(d,plural)=>plural?(d.t==="m-pers"?"pp":"po"):({"m-inan":"mi","m-anim":"ma","m-pers":"ma",f:"f",n:"n"}[d.t]||null);
 function nextFill(){
   const on=Object.keys(tState.cases).filter(k=>tState.cases[k]).map(Number);
   if(!on.length){tState.cur=null;return;}
@@ -29923,7 +30039,8 @@ function trainFill(v){
       <span class="pl" style="font-weight:600;color:var(--ink-2)">${esc(d.p)}</span> (${esc(d.ko)})</div>
     <div class="opts">${tState.cur.opts.map((o,i)=>`<button data-o="${i}"><span class="k">${i+1}</span>
       <span class="pl" style="font-size:18px;font-weight:600">${esc(o)}</span></button>`).join("")}</div>
-    <div id="tfb"></div></div>`;})()}`;
+    <div id="tfb"></div></div>
+    <div id="thelp">${caseHelp(ci,nounSlot(d,plural),false)}</div>`;})()}`;
 
   $("#tback").onclick=()=>{tState.mode=null;tState.only=null;render();window.scrollTo(0,0);};
   v.querySelectorAll("[data-tc]").forEach(b=>{
@@ -29942,6 +30059,7 @@ function trainFill(v){
       const t=tState.cur.opts[+x.dataset.o];
       if(t===ans)x.classList.add("right"); else if(x===b)x.classList.add("wrong");});
     const fr=frameFill(ci,ans,plural), c=CASES.find(x=>x.id===ci);
+    if($("#thelp"))$("#thelp").innerHTML=caseHelp(ci,nounSlot(d,plural),true);
     /* 오답이면 그 형태가 실제로는 몇 격인지 알려 준다 */
     const wrongIdx=(plural?d.pl:d.sg).indexOf(chosen);
     const wrongIs=(!ok&&wrongIdx>=0)?`<div style="font-size:13px;color:var(--ink-3);margin-top:6px">
