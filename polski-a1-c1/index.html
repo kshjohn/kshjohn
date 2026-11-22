@@ -28776,60 +28776,63 @@ function examScore(){
 }
 function viewExam(v){
   if(fx)return viewFull(v);
+  if(mx)return mxView(v);
   if(!ex){
     const hist=(S.exams||[]).slice(-5).reverse();
     const lvl=EXAM_LEVELS.find(x=>x.id===examLevel)||EXAM_LEVELS[0];
-    v.innerHTML=`<h2 class="sec">모의고사</h2>
-    <p class="lede">폴란드 국가인증시험(<span class="pl">egzamin certyfikatowy</span>)의 구성을 따랐습니다. 실제 시험처럼 <b>푸는 동안 정답을 알려 주지 않고</b>, 끝나야 채점합니다.</p>
-    <div class="card pad" style="margin-bottom:16px">
-      <div class="eyebrow" style="margin-bottom:10px">시험 레벨</div>
-      <div class="preps" style="gap:8px">${EXAM_LEVELS.map(x=>`<span data-exlv="${x.id}" role="button" tabindex="0"
+    const modRow=(t,pl,min,tasks,pts)=>`<tr><td class="k">${t}</td><td class="pl" style="color:var(--ink-3)">${pl}</td>
+      <td class="mono" style="white-space:nowrap">${min}분</td><td style="font-size:13px">${tasks}</td><td class="mono">${pts}</td><td class="mono">${pts/2}</td></tr>`;
+    const mh=(S.mexams||[]).slice(-8).reverse();
+    v.innerHTML=`<h2 class="sec">모의고사 — 실전 형식</h2>
+    <p class="lede">폴란드 국가인증시험(<span class="pl">egzamin certyfikatowy</span>) B1의 최근 공식 시험지(2022~2024) 형식을 따랐습니다.
+      과목마다 <b>Zadanie 1, 2, 3 …</b> 과제로 나뉘고, 지시문은 실제처럼 폴란드어(아래에 한국어 풀이)입니다.
+      녹음은 <b>한 번만</b> 재생되고, 정답은 과목을 마쳐야 공개됩니다.</p>
+    <div class="card scroll-x"><table class="tb"><thead><tr>
+      <th>과목</th><th>Moduł</th><th>시간</th><th>과제</th><th>배점</th><th>합격선</th></tr></thead><tbody>
+      ${modRow("듣기","Rozumienie ze słuchu",30,"5과제 — A/B/C · P/F · 사람-문장 짝 · 대화 A/B/C · 메모 채우기",30)}
+      ${modRow("독해","Rozumienie tekstów pisanych",40,"5과제 — 짧은 글 A/B/C · 제목 짝 · TAK/NIE · 긴 글 A/B/C · 빈칸에 문장",30)}
+      ${modRow("문법","Poprawność gramatyczna",45,"8과제 — 격 고르기 · 현재·과거 쓰기 · 상·법 · 비교 · 수사 · 전치사·접속사 · 바꿔 쓰기",30)}
+      ${modRow("쓰기","Pisanie",75,"세 세트 중 하나를 골라 a) 짧은 글 b) 긴 글",30)}
+      ${modRow("말하기","Mówienie",15,"사진 묘사 · 독백 · 상황 대화",40)}
+    </tbody></table></div>
+    <p class="lede" style="margin-top:12px">필기 네 과목은 합쳐서 <b>190분</b>, 말하기는 <b>15분</b>입니다. <b>한 과목이라도 50%를 못 넘으면 불합격</b>입니다.</p>
+    <div class="card pad" style="margin-top:4px">
+      <div class="eyebrow" style="margin-bottom:10px">시험지</div>
+      <div class="preps" style="gap:8px">${[["rand","무작위"]].concat(RX_SETS.map(x=>[x.id,x.t])).map(([k,t])=>`<span data-rxset="${k}" role="button" tabindex="0"
         style="cursor:pointer;font-family:var(--font-ui);font-size:13.5px;font-weight:600;
-        border-color:${examLevel===x.id?"var(--carmine)":"var(--line)"};
-        background:${examLevel===x.id?"color-mix(in srgb,var(--carmine) 10%,transparent)":"transparent"};
-        color:${examLevel===x.id?"var(--carmine)":"var(--ink-3)"}">${x.t}</span>`).join("")}</div>
-      <div style="font-size:13px;color:var(--ink-3);margin-top:10px">${esc(lvl.note)}</div>
+        border-color:${rxSetPick===k?"var(--carmine)":"var(--line)"};
+        background:${rxSetPick===k?"color-mix(in srgb,var(--carmine) 10%,transparent)":"transparent"};
+        color:${rxSetPick===k?"var(--carmine)":"var(--ink-3)"}">${t}</span>`).join("")}</div>
+      <div style="font-size:12.5px;color:var(--ink-3);margin-top:8px">시험지마다 듣기·독해·문법 문제가 모두 다릅니다. 쓰기·말하기 주제는 매번 새로 뽑습니다.</div>
     </div>
-    <div class="card scroll-x"><table class="tb"><thead><tr>
-      <th>영역</th><th>Sekcja</th><th>문항</th></tr></thead><tbody>
-      ${EXAM_SECTIONS.map(s=>`<tr><td class="k">${s.t}</td>
-        <td class="pl" style="color:var(--ink-3)">${s.pl}</td>
-        <td class="mono">${s.n}</td></tr>`).join("")}
-      <tr><td class="k">합계</td><td></td><td class="mono">${EXAM_SECTIONS.reduce((a,s)=>a+s.n,0)}</td></tr>
-    </tbody></table></div>
-    <div class="grid g2" style="margin-top:16px">
-      <div class="stat"><div class="n">${EXAM_MIN}<span style="font-size:15px;color:var(--ink-3)">분</span></div>
-        <div class="l">제한 시간 · 다 되면 자동 제출됩니다</div></div>
-      <div class="stat"><div class="n">50 / 60<span style="font-size:15px;color:var(--ink-3)">%</span></div>
-        <div class="l">합격 기준 — 각 영역 50% 이상, 전체 60% 이상</div></div>
+    <h2 class="sec">실전 통합 모의고사</h2>
+    <p class="lede">다섯 과목을 실제 순서(듣기 → 독해 → 문법 → 쓰기 → 말하기)와 시간대로 봅니다. 과목을 마치거나 시간이 끝나면 <b>앞 과목으로 돌아갈 수 없습니다</b>. 쓰기·말하기는 Claude 가 채점합니다.</p>
+    <div class="inline"><button class="btn red" id="exFull">실전 통합 모의고사 시작 (205분)</button></div>
+    <h2 class="sec">과목별 실전 연습</h2>
+    <p class="lede">한 과목만 실제 시간과 형식으로 풉니다. 끝나면 과제별 점수, 정답, 녹음 대본이 나옵니다.</p>
+    <div class="grid g3">
+      ${["listen","read","gram"].map(id=>{const m=RX_MODS[id], n=RX_SETS[0][id].length;
+        return `<button class="qtype" data-mx="${id}"><b>${m.t} · ${m.pl}</b><small>${m.min}분 · ${n}과제 · 30점 · 합격선 15점</small></button>`;}).join("")}
     </div>
-    <p class="lede" style="margin-top:20px"><b>듣기</b>는 브라우저 폴란드어 음성으로 읽어 줍니다. 문제마다 다시 들을 수 있지만, 대본은 채점이 끝나야 보입니다.<br>
-    독해·듣기 지문은 세 레벨이 공용입니다 — 문법·어휘 영역만 레벨에 따라 달라집니다.</p>
-    <div class="inline" style="margin-top:8px">
-      <button class="btn red" id="exStart">빠른 모의고사 시작 (${EXAM_MIN}분)</button>
-      <span style="font-size:13px;color:var(--ink-3)">중간에 그만두면 기록은 남지 않습니다.</span>
-    </div>
-    <h2 class="sec">전 과목 통합 모의고사</h2>
-    <p class="lede">실제 인증시험과 같은 다섯 과목을 한 번에 봅니다. 필기 네 과목은
-      <b>듣기 30분 · 문법 45분 · 독해 45분 · 쓰기 70분(합 190분)</b>, 말하기는 <b>15분</b>입니다.
-      과목마다 30점(말하기 40점)이고 <b>한 과목이라도 50%를 못 넘기면 불합격</b>이라, 총점보다 가장 약한 과목이 중요합니다.
-      쓰기와 말하기는 Claude 가 네 기준으로 채점합니다.</p>
-    <div class="card scroll-x"><table class="tb"><thead><tr>
-      <th>과목</th><th>Moduł</th><th>시간</th><th>배점</th><th>합격선</th></tr></thead><tbody>
-      ${FULL_MODS.map(m=>`<tr><td class="k">${m.t}</td><td class="pl" style="color:var(--ink-3)">${m.pl}</td>
-        <td class="mono" style="white-space:nowrap">${m.min}분</td><td class="mono">${m.pts}</td><td class="mono">${m.pts/2}</td></tr>`).join("")}
-      <tr><td class="k">합계</td><td></td><td class="mono">205분</td><td class="mono">160</td><td></td></tr>
-    </tbody></table></div>
-    <div class="inline" style="margin-top:12px">
-      <button class="btn red" id="exFull">통합 모의고사 시작</button>
-      <span style="font-size:13px;color:var(--ink-3)">과목을 마치면 앞으로 돌아갈 수 없습니다 — 실제 시험과 같습니다.</span>
-    </div>
+    <label class="pgate" style="margin-top:10px"><input type="checkbox" id="rxRep" ${rxReplay?"checked":""}> 듣기 연습에서 녹음을 여러 번 듣기 (실제 시험은 1회)</label>
+    ${mh.length?`<h2 class="sec">과목별 연습 기록</h2><div class="card pad">
+      ${mh.map(h=>`<div class="wrongrow"><span class="pw" style="font-weight:600">${RX_MODS[h.id]?RX_MODS[h.id].t:h.id} · ${(RX_SETS.find(x=>x.id===h.set)||{t:h.set}).t}</span>
+        <span class="mono" style="margin-left:auto;color:${h.pts>=15?"var(--good)":"var(--bad)"}">${fmtPts(h.pts)} / 30</span></div>`).join("")}</div>`:""}
     ${(S.fexams||[]).length?`<h2 class="sec">통합 모의고사 기록</h2><div class="card pad">
       ${(S.fexams||[]).slice(-5).reverse().map(h=>`<div class="wrongrow">
         <span class="pw" style="font-weight:600">${h.p?"합격":"불합격"}</span>
-        <span class="mono">듣기 ${h.l} · 문법 ${h.g} · 독해 ${h.r} · 쓰기 ${h.w} · 말하기 ${h.s}</span>
+        <span class="mono">듣기 ${h.l} · 독해 ${h.r} · 문법 ${h.g} · 쓰기 ${h.w} · 말하기 ${h.s}</span>
         <span class="mono" style="margin-left:auto;color:${h.p?"var(--good)":"var(--bad)"}">${h.l+h.g+h.r+h.w+h.s}/160</span>
       </div>`).join("")}</div>`:""}
+    <h2 class="sec">빠른 점검 <span style="font-size:14px;font-weight:500;color:var(--ink-3)">— 시험 형식 아님</span></h2>
+    <p class="lede">문법·어휘·짧은 독해·듣기를 낱문항 4지선다로 30분 안에 훑습니다. 실전 대비는 위의 실전 형식을 쓰세요.</p>
+    <div class="inline" style="margin-bottom:8px">
+      <span style="font-size:13px;color:var(--ink-3)">레벨</span>
+      <span class="preps" style="gap:6px">${EXAM_LEVELS.map(x=>`<span data-exlv="${x.id}" role="button" tabindex="0"
+        style="cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:600;padding:3px 10px;
+        border-color:${examLevel===x.id?"var(--carmine)":"var(--line)"};
+        color:${examLevel===x.id?"var(--carmine)":"var(--ink-3)"}">${x.t}</span>`).join("")}</span>
+      <button class="btn ghost" id="exStart">빠른 점검 시작 (${EXAM_MIN}분)</button></div>
     ${hist.length?`<h2 class="sec">최근 응시 기록</h2><div class="card pad">
       ${hist.map(h=>`<div class="wrongrow">
         <span class="pw" style="font-weight:600">${h.lv||"B1"} · ${h.pass?"합격":"불합격"}</span>
@@ -28839,6 +28842,11 @@ function viewExam(v){
       </div>`).join("")}</div>`:""}`;
     $("#exStart").onclick=startExam;
     $("#exFull").onclick=startFull;
+    v.querySelectorAll("[data-mx]").forEach(b=>b.onclick=()=>mxStart(b.dataset.mx));
+    const rp=$("#rxRep",v); if(rp)rp.onchange=()=>{ rxReplay=rp.checked; };
+    v.querySelectorAll("[data-rxset]").forEach(b=>{
+      const go=()=>{ rxSetPick=b.dataset.rxset; render(); };
+      b.onclick=go; b.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go();}};});
     v.querySelectorAll("[data-exlv]").forEach(b=>{
       const go=()=>{examLevel=b.dataset.exlv;render();};
       b.onclick=go; b.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go();}};});
@@ -31538,23 +31546,801 @@ function wrtTask(v){
    과목마다 30점(말하기는 40점)이고 한 과목이라도 50%를 못 넘으면 불합격이다.
    그래서 총점보다 '가장 약한 과목'을 보여 주는 것이 이 화면의 목적이다.
    ======================================================================= */
+/* =======================================================================
+   실전 시험지 (B1) — 국가인증시험 egzamin certyfikatowy 의 최근(2022~2024) 공식 시험지 형식을 따른다.
+   듣기 5과제 30점 · 독해 5과제 30점 · 문법 8과제 30점. 지시문은 실제처럼 폴란드어, 아래에 한국어 풀이.
+   녹음 대본·지문·문항은 이 앱을 위해 새로 쓴 것이다(공식 시험지의 문장을 옮기지 않았다).
+   과제 유형: mc(A/B/C) · tf(P/F, TAK/NIE) · match(짝 맞추기, 하나 남음) · gapsent(빈칸에 문장 넣기)
+             note(들은 내용으로 메모 채우기) · pick(괄호 안에서 맞는 꼴 고르기) · open(알맞은 꼴 쓰기)
+             bank(상자 속 낱말로 빈칸 채우기, 하나 남음) · trans(같은 뜻이 되게 바꿔 쓰기)
+   녹음 한 줄: "K|…" 여자 목소리, "M|…" 남자 목소리, 접두어 없으면 안내 방송·내레이션
+   ======================================================================= */
+const RX_SETS=[
+{id:"A", t:"Arkusz 1",
+ listen:[
+  {type:"mc", pts:1, pl:"Proszę posłuchać nagrań i zaznaczyć poprawną odpowiedź: A, B albo C.",
+   ko:"짧은 녹음 6개를 듣고 맞는 답을 고르세요. 녹음마다 한 번씩 재생됩니다.",
+   items:[
+    {rec:["K|Cześć Kasiu, tu Ola. Słuchaj, jutro nie mogę przyjść na trening o szóstej, bo muszę zostać dłużej w pracy. Może spotkamy się w sobotę rano na basenie? Zadzwoń do mnie wieczorem."],
+     q:"Dlaczego Ola nie przyjdzie jutro na trening?", o:["Jest chora.","Musi dłużej pracować.","Ma spotkanie na basenie."], a:1},
+    {rec:["Szanowni klienci, informujemy, że w niedzielę nasz sklep będzie czynny krócej, od dziesiątej do szesnastej. W poniedziałek zapraszamy już od siódmej rano. Dziękujemy."],
+     q:"Do której godziny będzie otwarty sklep w niedzielę?", o:["Do dziesiątej.","Do szesnastej.","Do siódmej."], a:1},
+    {rec:["M|Dzień dobry, chciałbym kupić bilet do Torunia na jutro rano.","K|Pociąg o siódmej piętnaście jest już pełny. Mam jeszcze miejsca na ósmą czterdzieści.","M|Dobrze, to poproszę ten późniejszy, w jedną stronę."],
+     q:"Jaki bilet kupi mężczyzna?", o:["Na 7:15, w obie strony.","Na 8:40, w jedną stronę.","Na 8:40, w obie strony."], a:1},
+    {rec:["Jutro na północy kraju będzie pochmurno i deszczowo, a temperatura nie przekroczy dziesięciu stopni. Na południu czeka nas za to słoneczny dzień i nawet osiemnaście stopni."],
+     q:"Jaka pogoda będzie jutro na południu?", o:["Deszczowa i zimna.","Pochmurna, około dziesięciu stopni.","Słoneczna i ciepła."], a:2},
+    {rec:["M|Przychodnia Zdrowie, słucham.","K|Dzień dobry, chciałabym przełożyć wizytę u dentysty ze środy na piątek.","M|W piątek mam wolny termin tylko o czternastej.","K|Pasuje mi, dziękuję."],
+     q:"Kiedy kobieta pójdzie do dentysty?", o:["W środę.","W piątek rano.","W piątek po południu."], a:2},
+    {rec:["Szkoła językowa Lingwa zaprasza na wakacyjne kursy angielskiego i hiszpańskiego. Zajęcia odbywają się dwa razy w tygodniu, wieczorem. Przy zapisie do końca maja – dwadzieścia procent zniżki!"],
+     q:"Kiedy można dostać zniżkę?", o:["Przy zapisie do końca maja.","Przy zapisie na dwa kursy.","Na zajęciach wieczornych."], a:0}
+   ]},
+  {type:"tf", labels:["P","F"], pts:0.5, pl:"Proszę posłuchać wywiadu i zdecydować, które zdania są prawdziwe (P), a które fałszywe (F).",
+   ko:"라디오 인터뷰를 듣고 문장이 내용과 맞으면 P(참), 틀리면 F(거짓)를 고르세요.",
+   rec:["M|Dzień dobry. Moim gościem jest dziś pani Marta Lis, która od trzech lat prowadzi ogród społeczny na łódzkich Bałutach. Skąd pomysł na taki ogród?",
+        "K|Dzień dobry. Mieszkam w bloku i zawsze brakowało mi zieleni. Na naszym osiedlu był pusty, zaniedbany plac. Razem z sąsiadami napisaliśmy do miasta i dostaliśmy zgodę, żeby zrobić tam ogród.",
+        "M|Kto do was przychodzi?",
+        "K|Wszyscy – emeryci, studenci, rodziny z dziećmi. Dziś mamy około czterdziestu członków. Każdy może przyjść, nie trzeba za nic płacić.",
+        "M|A co uprawiacie?",
+        "K|Głównie warzywa i zioła: pomidory, sałatę, bazylię. Kwiatów jest mniej, ale w przyszłym roku chcemy posadzić więcej, żeby było więcej pszczół.",
+        "M|Czy były jakieś problemy?",
+        "K|Na początku tak. Pierwszego lata ktoś zniszczył część grządek. Było nam bardzo przykro, ale sąsiedzi zaczęli pilnować ogrodu wieczorami i od tego czasu jest spokój.",
+        "M|Co jest dla pani najważniejsze w tym projekcie?",
+        "K|Ludzie. Wcześniej mijaliśmy się na klatce i mówiliśmy tylko „dzień dobry”. Teraz razem gotujemy, robimy pikniki, a w sierpniu organizujemy święto plonów."],
+   items:[
+    {s:"Marta Lis prowadzi ogród od trzech lat.", a:true},
+    {s:"Marta mieszka w domu z dużym ogrodem.", a:false},
+    {s:"Ogród powstał na pustym placu na osiedlu.", a:true},
+    {s:"Mieszkańcy dostali zgodę na ogród od miasta.", a:true},
+    {s:"Członkowie ogrodu płacą miesięczną składkę.", a:false},
+    {s:"W ogrodzie uprawia się głównie kwiaty.", a:false},
+    {s:"W przyszłym roku ogrodnicy chcą posadzić więcej kwiatów.", a:true},
+    {s:"W pierwszym roku ktoś zniszczył część ogrodu.", a:true},
+    {s:"Ogrodu pilnuje firma ochroniarska.", a:false},
+    {s:"Dzięki ogrodowi sąsiedzi lepiej się poznali.", a:true}
+   ]},
+  {type:"match", pts:1, pl:"Proszę posłuchać wypowiedzi pięciu osób i dopasować do każdej osoby właściwe zdanie (A–F). Jedno zdanie jest niepotrzebne.",
+   ko:"다섯 사람의 말을 듣고 각 사람에게 맞는 문장(A–F)을 고르세요. 문장 하나는 남습니다. 주제: 퇴근 후 여가.",
+   opts:[{k:"A",s:"Ta osoba pomaga innym w wolnym czasie."},{k:"B",s:"Ta osoba uczy się czegoś nowego."},
+         {k:"C",s:"Ta osoba ma czas dla siebie dopiero wtedy, gdy dzieci śpią."},{k:"D",s:"Ta osoba uprawia sport, chociaż nie zawsze ma ochotę."},
+         {k:"E",s:"Ta osoba lubi przyjmować gości."},{k:"F",s:"Ta osoba ogląda wieczorami seriale."}],
+   items:[
+    {label:"Osoba 1", rec:["M|Po pracy jestem tak zmęczony, że najchętniej leżałbym na kanapie. Ale dwa razy w tygodniu zmuszam się i idę pobiegać do parku. Potem czuję się dużo lepiej."], a:"D"},
+    {label:"Osoba 2", rec:["K|Ja uwielbiam gotować. Wieczorem szukam w internecie nowych przepisów, a w weekend zapraszam znajomych i sprawdzamy, co mi wyszło."], a:"E"},
+    {label:"Osoba 3", rec:["M|Od roku uczę się grać na gitarze. Chodzę na lekcje w środy, a codziennie ćwiczę przynajmniej pół godziny. Sąsiedzi chyba nie są zachwyceni."], a:"B"},
+    {label:"Osoba 4", rec:["K|Mam dwoje małych dzieci, więc właściwie nie mam wolnego czasu. Kiedy dzieci zasną, czytam książki – to jedyna chwila tylko dla mnie."], a:"C"},
+    {label:"Osoba 5", rec:["M|Jestem wolontariuszem w schronisku dla zwierząt. Trzy razy w tygodniu wyprowadzam psy na spacer. To lepsze niż siłownia!"], a:"A"}
+   ]},
+  {type:"mc", pts:1, pl:"Proszę posłuchać rozmowy i zaznaczyć poprawną odpowiedź: A, B albo C.",
+   ko:"두 친구의 대화를 듣고 맞는 답을 고르세요. 질문을 먼저 읽고 들으세요.",
+   rec:["K|Marek, masz już plany na długi weekend?",
+        "M|Jeszcze nie. Myślałem o górach, ale prognoza jest fatalna, ma padać przez trzy dni.",
+        "K|To może pojedziemy nad morze? Moja ciocia ma mały dom w Łebie i w maju jest wolny.",
+        "M|Brzmi świetnie. Ale jak dojedziemy? Mój samochód jest u mechanika do przyszłego tygodnia.",
+        "K|Pojedziemy pociągiem do Lęborka, a stamtąd autobusem. Cała podróż zajmie około sześciu godzin.",
+        "M|Sześć godzin to sporo… Ale dobrze, w pociągu przynajmniej poczytam. Ile kosztują bilety?",
+        "K|Jeśli kupimy przez internet z wyprzedzeniem, zapłacimy po osiemdziesiąt złotych w jedną stronę.",
+        "M|W porządku. A co z jedzeniem? Będziemy gotować?",
+        "K|Śniadania zrobimy w domu, a na obiad będziemy chodzić do smażalni ryb. Ciocia mówi, że najlepsza jest przy porcie.",
+        "M|Super. Zabiorę rower? Słyszałem, że są tam ładne ścieżki wzdłuż plaży.",
+        "K|Rower się nie zmieści w autobusie. Ale możemy wypożyczyć rowery na miejscu, to niedrogo.",
+        "M|Dobrze. To kupuję bilety jeszcze dziś wieczorem."],
+   items:[
+    {q:"Dlaczego Marek nie chce jechać w góry?", o:["Nie lubi gór.","Ma być brzydka pogoda.","To za daleko."], a:1},
+    {q:"Gdzie będą mieszkać?", o:["W hotelu przy porcie.","W domu cioci Ani.","Na kempingu."], a:1},
+    {q:"Dlaczego nie pojadą samochodem?", o:["Samochód jest w naprawie.","Marek nie ma prawa jazdy.","Benzyna jest za droga."], a:0},
+    {q:"Ile potrwa podróż?", o:["Około trzech godzin.","Około sześciu godzin.","Cały dzień."], a:1},
+    {q:"Ile zapłacą za bilet w jedną stronę?", o:["80 zł.","160 zł.","60 zł."], a:0},
+    {q:"Gdzie będą jeść obiady?", o:["W domu.","W hotelowej restauracji.","W smażalni ryb."], a:2},
+    {q:"Co zrobią z rowerami?", o:["Wezmą swoje rowery.","Wypożyczą rowery na miejscu.","Nie będą jeździć na rowerze."], a:1}
+   ]},
+  {type:"note", pts:1, pl:"Proszę posłuchać komunikatu i uzupełnić notatkę. W każdą lukę proszę wpisać jedno lub dwa słowa albo liczbę.",
+   ko:"안내 방송을 듣고 메모의 빈칸을 채우세요. 낱말 한두 개나 숫자로 적습니다. 철자가 조금 틀려도 알아볼 수 있으면 정답으로 봅니다.",
+   rec:["Uwaga, studenci kursu języka polskiego! W przyszłą sobotę, czternastego października, organizujemy wycieczkę do Kazimierza Dolnego. Zbiórka o godzinie siódmej trzydzieści przed głównym wejściem do biblioteki. Pojedziemy autokarem, podróż trwa około dwóch godzin. Na miejscu zwiedzimy rynek i zamek, a po obiedzie będzie czas wolny. Koszt wycieczki to sześćdziesiąt złotych – w cenie jest transport, przewodnik i obiad. Pieniądze należy wpłacić w sekretariacie do środy. Prosimy zabrać wygodne buty, bo będziemy dużo chodzić. Powrót planujemy około dziewiętnastej."],
+   title:"WYCIECZKA – NOTATKA",
+   items:[
+    {label:"Dokąd:", keys:["kazimierz"], show:"do Kazimierza Dolnego"},
+    {label:"Kiedy: sobota,", keys:["14","czternast"], show:"14 października"},
+    {label:"Zbiórka: 7:30 przed wejściem do", keys:["bibliotek"], show:"biblioteki"},
+    {label:"Środek transportu:", keys:["autokar","autobus"], show:"autokar"},
+    {label:"Cena (zł):", keys:["60","szescdziesiat"], show:"60 zł"},
+    {label:"W cenie: transport, przewodnik i", keys:["obiad"], show:"obiad"},
+    {label:"Zapłacić w sekretariacie do:", keys:["srod"], show:"środy"}
+   ]}
+ ],
+ read:[
+  {type:"mc", pts:1, pl:"Proszę przeczytać teksty i zaznaczyć poprawną odpowiedź: A, B albo C.",
+   ko:"짧은 글 5개(광고·문자·안내문·이메일)를 읽고 맞는 답을 고르세요.",
+   items:[
+    {text:"Sprzedam rower miejski, mało używany, kupiony w zeszłym roku. Cena 600 zł, do negocjacji. Odbiór osobisty – Gdańsk Wrzeszcz. Tel. 501 234 567 (po 17.00).", title:"Ogłoszenie",
+     q:"Z ogłoszenia wiadomo, że…", o:["rower jest zupełnie nowy.","cenę można jeszcze ustalić.","sprzedający wyśle rower pocztą."], a:1},
+    {text:"Kochanie, wrócę dziś później, mam spotkanie z klientem. Nie czekaj z kolacją. Kupiłam już chleb, więc nie musisz iść do sklepu. Buziaki, M.", title:"SMS",
+     q:"Autorka SMS-a…", o:["prosi o zrobienie zakupów.","wróci na kolację.","informuje, że chleb jest już kupiony."], a:2},
+    {text:"Od 1 marca książki można wypożyczać na 30 dni zamiast 21. Termin zwrotu można przedłużyć dwa razy przez internet. Za każdy dzień spóźnienia pobieramy opłatę 50 groszy.", title:"Informacja w bibliotece",
+     q:"Od marca czytelnicy…", o:["mogą trzymać książki dłużej niż wcześniej.","nie płacą za spóźnienie.","muszą przedłużać książki osobiście."], a:0},
+    {text:"Szanowni Państwo, uprzejmie informujemy, że z powodu choroby prowadzącej zajęcia jogi w czwartek 12 maja się nie odbędą. Zajęcia zostaną odrobione w sobotę 21 maja o tej samej godzinie. Z poważaniem, recepcja klubu Forma", title:"E-mail",
+     q:"Zajęcia jogi…", o:["zostały odwołane na zawsze.","odbędą się w innym terminie.","poprowadzi nowa instruktorka."], a:1},
+    {text:"Uwaga! Remont windy od 3 do 14 czerwca. Przepraszamy za utrudnienia. Osoby, które potrzebują pomocy przy wnoszeniu zakupów, prosimy o kontakt z administracją: pokój 2, parter.", title:"Informacja na klatce schodowej",
+     q:"Mieszkańcy, którzy potrzebują pomocy, powinni…", o:["zadzwonić do firmy remontowej.","zgłosić się do administracji.","poczekać do 14 czerwca."], a:1}
+   ]},
+  {type:"match", pts:1, pl:"Proszę przeczytać notatki prasowe i dopasować do nich tytuły (A–G). Jeden tytuł jest niepotrzebny.",
+   ko:"짧은 기사 6개를 읽고 맞는 제목(A–G)을 고르세요. 제목 하나는 남습니다.",
+   opts:[{k:"A",s:"Zakupy bez kasy"},{k:"B",s:"Darmowa komunikacja w dni smogu"},{k:"C",s:"Sukces polskiej sportsmenki"},
+         {k:"D",s:"Szybka diagnoza w aptece"},{k:"E",s:"Ostrzeżenie dla turystów w górach"},{k:"F",s:"Moda z drugiej ręki"},{k:"G",s:"Nowe połączenia lotnicze"}],
+   items:[
+    {label:"1", text:"W Poznaniu otwarto sklep, w którym nie ma kasjerów. Klienci skanują produkty telefonem i płacą przez aplikację. Na razie sklep działa w godzinach 6–23.", a:"A"},
+    {label:"2", text:"Mieszkańcy Krakowa mogą od poniedziałku jeździć tramwajami za darmo w dni, w których jakość powietrza jest bardzo zła. Miasto chce w ten sposób zachęcić kierowców do zostawienia samochodów w domu.", a:"B"},
+    {label:"3", text:"Polska siatkarka Natalia Wróbel została wybrana najlepszą zawodniczką mistrzostw Europy. Jej drużyna zdobyła srebrny medal.", a:"C"},
+    {label:"4", text:"Naukowcy z Wrocławia opracowali test, który w ciągu dziesięciu minut pokazuje, czy pacjent ma grypę. Test będzie dostępny w aptekach od jesieni.", a:"D"},
+    {label:"5", text:"W Tatrach spadł pierwszy śnieg. Ratownicy ostrzegają, żeby nie wychodzić na szlaki w letnich butach i zawsze sprawdzać prognozę pogody.", a:"E"},
+    {label:"6", text:"Coraz więcej Polaków kupuje używane ubrania. Według badań co trzecia osoba w wieku 18–35 lat robiła w ostatnim roku zakupy w sklepie z odzieżą z drugiej ręki.", a:"F"}
+   ]},
+  {type:"tf", labels:["TAK","NIE"], pts:0.5, pl:"Proszę przeczytać tekst i zdecydować, które zdania są zgodne z tekstem (TAK), a które nie (NIE).",
+   ko:"기사를 읽고 문장이 내용과 맞으면 TAK, 맞지 않으면 NIE를 고르세요.",
+   title:"Coraz później z domu",
+   text:"Według danych europejskich Polacy wyprowadzają się od rodziców średnio w wieku około 28 lat. To później niż w krajach skandynawskich, gdzie młodzi ludzie zaczynają samodzielne życie przed dwudziestym piątym rokiem życia, ale wcześniej niż na przykład we Włoszech czy w Chorwacji.\n\nNajczęściej podawanym powodem są wysokie ceny mieszkań. W dużych miastach, takich jak Warszawa czy Kraków, wynajęcie kawalerki kosztuje często ponad połowę pensji młodej osoby. Kupno własnego mieszkania bez pomocy rodziców lub kredytu jest dla wielu nierealne.\n\nNie wszyscy jednak widzą w tym problem. Dwudziestodziewięcioletni Bartek, który pracuje jako grafik, mówi: „Mam świetne relacje z rodzicami. Płacę za swoje jedzenie i pomagam w domu, a oszczędzam na wkład własny. Za dwa lata chcę kupić mieszkanie”.\n\nPsycholodzy zwracają uwagę, że wspólne mieszkanie może być dobrym rozwiązaniem, jeśli wszyscy domownicy szanują swoją prywatność i jasno ustalą zasady. Problem pojawia się wtedy, gdy dorosłe dzieci nie biorą odpowiedzialności za dom, a rodzice traktują je jak nastolatków.",
+   items:[
+    {s:"Polacy wyprowadzają się od rodziców średnio w wieku około 28 lat.", a:true},
+    {s:"W Skandynawii młodzi ludzie wyprowadzają się później niż w Polsce.", a:false},
+    {s:"We Włoszech młodzi mieszkają z rodzicami dłużej niż w Polsce.", a:true},
+    {s:"Najczęstszym powodem są wysokie ceny mieszkań.", a:true},
+    {s:"W Warszawie wynajem kawalerki jest tani.", a:false},
+    {s:"Bartek nie płaci za nic w domu rodziców.", a:false},
+    {s:"Bartek planuje kupić mieszkanie.", a:true},
+    {s:"Bartek nie dogaduje się z rodzicami.", a:false},
+    {s:"Według psychologów wspólne mieszkanie zawsze jest złym pomysłem.", a:false},
+    {s:"Problemy pojawiają się, gdy dorosłe dzieci nie biorą odpowiedzialności za dom.", a:true}
+   ]},
+  {type:"mc", pts:1, pl:"Proszę przeczytać tekst i zaznaczyć poprawną odpowiedź: A, B albo C.",
+   ko:"긴 기사를 읽고 맞는 답을 고르세요.",
+   title:"Z biura do piekarni",
+   text:"Jeszcze pięć lat temu Joanna Malinowska pracowała jako analityczka w dużym banku w Warszawie. Miała dobrą pensję, służbowy samochód i perspektywy awansu. „Wszyscy mówili, że mam idealną pracę. A mnie codziennie rano bolał brzuch, kiedy myślałam o biurze” – wspomina.\n\nPrzełom nastąpił podczas urlopu we Francji. Joanna zapisała się tam na trzydniowy kurs pieczenia chleba na zakwasie. „Pierwszy raz od lat czułam, że czas płynie inaczej. Nikt mnie nie poganiał, a efekt pracy mogłam zobaczyć i zjeść tego samego dnia” – śmieje się.\n\nPo powrocie nie rzuciła od razu pracy. Przez rok piekła chleb w weekendy, sprzedawała go znajomym i uczyła się prowadzenia firmy. Dopiero kiedy miała stałych klientów i oszczędności na pierwsze miesiące, złożyła wypowiedzenie. Rodzice byli przerażeni. „Mama płakała. Myślała, że zwariowałam” – mówi Joanna.\n\nDziś jej mała piekarnia na warszawskiej Pradze zatrudnia cztery osoby. Joanna wstaje o trzeciej w nocy i często pracuje po dwanaście godzin. Zarabia mniej niż w banku, ale – jak podkreśla – jest szczęśliwsza. „Najbardziej cieszy mnie to, że klienci wracają. Niektórzy przychodzą codziennie, znam imiona ich dzieci”.\n\nCzy poleciłaby innym taką zmianę? „Tak, ale nie bez przygotowania. Marzenia są ważne, ale trzeba mieć plan i trochę pieniędzy na start”.",
+   items:[
+    {q:"Pięć lat temu Joanna…", o:["pracowała w banku.","miała własną firmę.","szukała pracy."], a:0},
+    {q:"Dlaczego Joanna nie była zadowolona z pracy w banku?", o:["Zarabiała za mało.","Źle się czuła, kiedy myślała o pracy.","Nie miała szans na awans."], a:1},
+    {q:"Kurs pieczenia chleba Joanna zrobiła…", o:["w Warszawie.","przez internet.","na urlopie za granicą."], a:2},
+    {q:"Co podobało się Joannie w pieczeniu?", o:["Szybko widziała efekty pracy.","Mogła pracować w nocy.","Dobrze zarabiała."], a:0},
+    {q:"Po powrocie z Francji Joanna…", o:["od razu rzuciła pracę.","przez rok piekła chleb w wolnym czasie.","zapisała się na studia."], a:1},
+    {q:"Jak zareagowali rodzice Joanny?", o:["Bardzo się bali.","Pomogli jej finansowo.","Byli z niej dumni."], a:0},
+    {q:"Teraz Joanna…", o:["pracuje sama.","zarabia więcej niż w banku.","pracuje bardzo długo."], a:2},
+    {q:"Joanna radzi osobom, które chcą zmienić pracę, żeby…", o:["robiły to bez wahania.","najpierw dobrze się przygotowały.","zostały w swojej firmie."], a:1}
+   ]},
+  {type:"gapsent", pts:1, pl:"Proszę uzupełnić tekst zdaniami A–G. Jedno zdanie jest niepotrzebne.",
+   ko:"글의 빈칸 [1]~[6]에 들어갈 문장을 A–G에서 고르세요. 문장 하나는 남습니다.",
+   title:"Jak przygotować się do rozmowy kwalifikacyjnej?",
+   text:"Rozmowa kwalifikacyjna to dla wielu osób duży stres. [1] Przede wszystkim warto dowiedzieć się jak najwięcej o firmie: czym się zajmuje, ilu ma pracowników, jakie ma plany. [2]\n\nDrugim krokiem jest przygotowanie odpowiedzi na typowe pytania. Rekruterzy często pytają o mocne i słabe strony kandydata. [3] Lepiej szczerze powiedzieć, nad czym pracujemy, na przykład: „Czasem za długo poprawiam szczegóły, ale uczę się planować czas”.\n\nWażny jest też wygląd. Nie trzeba zakładać garnituru, jeśli firma ma luźny styl, ale ubranie powinno być czyste i porządne. [4]\n\nW dniu rozmowy przyjdź kilka minut wcześniej. [5] Na koniec rozmowy zwykle można zadać własne pytania. [6] Pytanie o zespół czy możliwości rozwoju pokazuje, że naprawdę interesujesz się tą pracą.",
+   opts:[{k:"A",s:"Dobra wiadomość jest taka, że można się do niej przygotować."},{k:"B",s:"Dzięki temu łatwiej będzie pokazać, że naprawdę chcesz tam pracować."},
+         {k:"C",s:"Odpowiedź „nie mam żadnych wad” nie zrobi dobrego wrażenia."},{k:"D",s:"Najlepiej wybrać strój, w którym czujesz się pewnie."},
+         {k:"E",s:"Spóźnienie to najgorszy możliwy początek."},{k:"F",s:"Nie warto z tego rezygnować."},
+         {k:"G",s:"Pensję najlepiej negocjować już w pierwszych minutach rozmowy."}],
+   items:[{label:"[1]",a:"A"},{label:"[2]",a:"B"},{label:"[3]",a:"C"},{label:"[4]",a:"D"},{label:"[5]",a:"E"},{label:"[6]",a:"F"}]}
+ ],
+ gram:[
+  {type:"pick", pts:0.5, pl:"Proszę podkreślić poprawną formę wyrazów podanych w nawiasach.",
+   ko:"괄호 안에서 맞는 꼴을 고르세요(실제 시험에서는 밑줄을 긋습니다). 명사·형용사·대명사의 격.",
+   title:"Mój tydzień",
+   text:"W poniedziałek jadę do {1} na konferencję. Mieszkam tam u {2}. We wtorek spotykam się z {3}. W środę nie mam {4} na sport. W czwartek idę z {5} do kina. Interesuję się {6}, więc w piątek idę do muzeum. W sobotę pomagam {7} w ogrodzie. W niedzielę myślę już tylko o {8}.",
+   items:[
+    {o:["Krakowa","Kraków","Krakowem"],a:0,why:"do + 속격"},
+    {o:["mojej siostry","moją siostrą","moja siostra"],a:0,why:"u + 속격"},
+    {o:["nowym klientem","nowego klienta","nowy klient"],a:0,why:"z (~와 함께) + 조격"},
+    {o:["czas","czasem","czasu"],a:2,why:"부정문의 목적어 → 속격"},
+    {o:["koleżankami","koleżanek","koleżankom"],a:0,why:"z + 조격 복수"},
+    {o:["polską historią","polską historię","polskiej historii"],a:0,why:"interesować się + 조격"},
+    {o:["starszemu sąsiadowi","starszego sąsiada","starszym sąsiadem"],a:0,why:"pomagać + 여격"},
+    {o:["długim spaniu","długie spanie","długiego spania"],a:0,why:"myśleć o + 전치격"}
+   ]},
+  {type:"open", pts:0.5, pl:"Proszę uzupełnić zdania odpowiednią formą czasowników z nawiasów w czasie teraźniejszym.",
+   ko:"괄호 속 동사를 현재형으로 바꿔 쓰세요.",
+   items:[
+    {s:"Codziennie rano (ja, pić) ___ kawę z mlekiem.", a:["piję"]},
+    {s:"Czy (ty, umieć) ___ pływać?", a:["umiesz"]},
+    {s:"Moi rodzice (mieszkać) ___ pod Warszawą.", a:["mieszkają"]},
+    {s:"(My, jechać) ___ do pracy tramwajem.", a:["jedziemy"]},
+    {s:"Ania często (chodzić) ___ na basen.", a:["chodzi"]},
+    {s:"Co (wy, robić) ___ w weekend?", a:["robicie"]}
+   ]},
+  {type:"open", pts:0.5, pl:"Proszę napisać czasowniki z nawiasów w czasie przeszłym.",
+   ko:"괄호 속 동사를 과거형으로 쓰세요. 주어의 성·수를 맞추세요.",
+   items:[
+    {s:"Wczoraj Marek (pójść) ___ do lekarza.", a:["poszedł"]},
+    {s:"(My – mężczyźni, być) ___ w zeszłym roku w Hiszpanii.", a:["byliśmy"]},
+    {s:"Anna (zapomnieć) ___ kluczy.", a:["zapomniała"]},
+    {s:"Dzieci (bawić się) ___ w ogrodzie cały dzień.", a:["bawiły się"]},
+    {s:"Kasiu, dlaczego nie (ty, zadzwonić) ___ do mnie?", a:["zadzwoniłaś"]},
+    {s:"Panowie (mieć) ___ dużo pracy.", a:["mieli"]}
+   ]},
+  {type:"pick", pts:0.5, pl:"Proszę podkreślić poprawną formę czasownika.",
+   ko:"알맞은 동사 꼴을 고르세요. 상(완료/불완료)·명령법·조건법.",
+   items:[
+    {s:"Wczoraj cały wieczór {1} książkę, ale jej nie skończyłem.", o:["czytałem","przeczytałem"], a:0, why:"과정·미완료 → 불완료상"},
+    {s:"Jutro {1} ten raport do dziesiątej i wyślę go szefowi.", o:["napiszę","będę pisać"], a:0, why:"끝낼 결과 → 완료상 미래"},
+    {s:"Kiedy byłem dzieckiem, często {1} na wieś do dziadków.", o:["jeździłem","pojechałem"], a:0, why:"반복(często) → 불완료상"},
+    {s:"{1} mi, proszę, chleb w drodze do domu.", o:["Kup","Kupuj"], a:0, why:"한 번의 부탁 → 완료상 명령"},
+    {s:"Gdybym miał więcej czasu, {1} hiszpańskiego.", o:["uczyłbym się","uczę się","uczyłem się"], a:0, why:"gdyby + 조건법"},
+    {s:"Nie {1} okna, jest bardzo zimno!", o:["otwieraj","otwórz"], a:0, why:"부정 명령 → 불완료상"},
+    {s:"Czy {1} pan mi pomóc?", o:["mógłby","mógłbym","mogę"], a:0, why:"공손한 부탁 → 3인칭(pan) 조건법"},
+    {s:"Codziennie {1} o szóstej.", o:["wstaję","wstanę"], a:0, why:"습관 → 불완료상 현재"}
+   ]},
+  {type:"pick", pts:0.5, pl:"Proszę podkreślić poprawną formę przymiotnika lub przysłówka.",
+   ko:"형용사·부사의 알맞은 비교 꼴을 고르세요.",
+   items:[
+    {s:"Kraków jest {1} niż Warszawa.", o:["mniejszy","mały","najmniejszy"], a:0, why:"niż → 비교급"},
+    {s:"To był {1} dzień w moim życiu!", o:["najlepszy","lepszy","dobry"], a:0, why:"최상급"},
+    {s:"Mój brat jest {1} ode mnie o dwa lata.", o:["starszy","najstarszy","stary"], a:0, why:"od + 속격 → 비교급"},
+    {s:"Mów, proszę, {1}, nie rozumiem.", o:["wolniej","wolno","najwolniej"], a:0, why:"부사 비교급"},
+    {s:"Ta sukienka jest {1} niż tamta.", o:["bardziej elegancka","elegancka","najbardziej elegancka"], a:0, why:"bardziej + 형용사"},
+    {s:"Latem dni są {1} niż zimą.", o:["dłuższe","długie","najdłuższe"], a:0, why:"niż → 비교급"}
+   ]},
+  {type:"open", pts:0.5, pl:"Proszę zapisać liczby z nawiasów słownie w odpowiedniej formie.",
+   ko:"괄호 속 숫자를 알맞은 꼴의 낱말로 쓰세요.",
+   items:[
+    {s:"Mam (2) ___ siostry.", a:["dwie"]},
+    {s:"W grupie jest (5) ___ studentek.", a:["pięć"]},
+    {s:"Spotkanie zaczyna się o (8) ___.", a:["ósmej"]},
+    {s:"Urodziłem się (15) ___ marca.", a:["piętnastego"]},
+    {s:"Na przyjęciu było (4) ___ mężczyzn.", a:["czterech"]},
+    {s:"Ten film trwa (2) ___ godziny.", a:["dwie"]}
+   ]},
+  {type:"bank", pts:0.5, pl:"Proszę uzupełnić tekst wyrazami z ramki. Jeden wyraz jest niepotrzebny.",
+   ko:"상자 안의 낱말로 빈칸을 채우세요. 낱말 하나는 남습니다. 전치사·접속사.",
+   words:["bo","chociaż","żeby","kiedy","do","bez","dla","przez","mimo"],
+   text:"Wczoraj poszłam {1} sklepu, {2} kupić prezent {3} mamy. Szłam {4} park, {5} było już ciemno. Wróciłam {6} prezentu, {7} sklep był już zamknięty. {8} wróciłam do domu, mama już spała.",
+   items:[{a:"do"},{a:"żeby"},{a:"dla"},{a:"przez"},{a:"chociaż"},{a:"bez"},{a:"bo"},{a:"kiedy"}]},
+  {type:"trans", pts:1, pl:"Proszę dokończyć drugie zdanie tak, żeby miało ten sam sens co pierwsze. Proszę użyć wyrazu z nawiasu.",
+   ko:"첫 문장과 같은 뜻이 되도록 둘째 문장의 빈칸을 채우세요. 괄호 속 낱말을 알맞은 꼴로 씁니다.",
+   items:[
+    {s1:"Anna jest wyższa od Marka.", s2:"Marek jest ___ niż Anna.", cue:"niski", a:["niższy"]},
+    {s1:"Nie wolno tu palić.", s2:"Tu ___ palić.", cue:"można", a:["nie można"]},
+    {s1:"Kupiłem ten samochód dwa lata temu.", s2:"Mam ten samochód od ___ lat.", cue:"dwa", a:["dwóch"]},
+    {s1:"Mój brat dobrze gotuje.", s2:"Mój brat jest dobrym ___.", cue:"kucharz", a:["kucharzem"]},
+    {s1:"Ktoś ukradł mi rower.", s2:"Mój rower został ___.", cue:"ukraść", a:["ukradziony","skradziony"]},
+    {s1:"Żadna góra w Polsce nie jest wyższa niż Rysy.", s2:"Rysy to ___ góra w Polsce.", cue:"wysoki", a:["najwyższa"]}
+   ]}
+ ]},
+
+{id:"B", t:"Arkusz 2",
+ listen:[
+  {type:"mc", pts:1, pl:"Proszę posłuchać nagrań i zaznaczyć poprawną odpowiedź: A, B albo C.",
+   ko:"짧은 녹음 6개를 듣고 맞는 답을 고르세요. 녹음마다 한 번씩 재생됩니다.",
+   items:[
+    {rec:["M|Dzień dobry, mówi Piotr Nowak z firmy kurierskiej. Mam dla pani paczkę, ale nikogo nie ma w domu. Zostawię ją w sklepie spożywczym na rogu. Może ją pani odebrać do dwudziestej."],
+     q:"Gdzie kobieta może odebrać paczkę?", o:["Na poczcie.","W sklepie spożywczym.","U sąsiadki."], a:1},
+    {rec:["Szanowni pasażerowie, pociąg do Wrocławia przyjedzie na tor drugi przy peronie czwartym. Pociąg jest opóźniony o około trzydzieści minut. Za utrudnienia przepraszamy."],
+     q:"Jaki problem ma pociąg do Wrocławia?", o:["Jest odwołany.","Jest opóźniony.","Odjedzie z innego miasta."], a:1},
+    {rec:["M|Co zamawiasz?","K|Chyba wezmę pierogi, bo zupa, którą jadłam tu wczoraj, była za słona.","M|A ja wezmę kotleta z ziemniakami i sok jabłkowy."],
+     q:"Co zamówi kobieta?", o:["Zupę pomidorową.","Pierogi.","Kotleta z ziemniakami."], a:1},
+    {rec:["Uwaga, klienci! Dzisiaj w dziale owoców i warzyw wszystkie jabłka są o połowę tańsze. Promocja trwa do zamknięcia sklepu."],
+     q:"Co jest dziś tańsze?", o:["Wszystkie warzywa.","Jabłka.","Wszystkie owoce."], a:1},
+    {rec:["K|Halo, Tomek? Gdzie jesteś? Film zaczyna się za dziesięć minut!","M|Przepraszam, stoję w korku. Kup bilety, oddam ci pieniądze. Będę za kwadrans."],
+     q:"Co ma zrobić kobieta?", o:["Kupić bilety.","Poczekać w samochodzie.","Wrócić do domu."], a:0},
+    {rec:["W najbliższy weekend w Parku Śląskim odbędzie się festiwal muzyki rockowej. Wstęp jest bezpłatny, ale trzeba się wcześniej zarejestrować na stronie internetowej festiwalu."],
+     q:"Co trzeba zrobić, żeby wejść na festiwal?", o:["Kupić bilet.","Zarejestrować się w internecie.","Przyjść przed południem."], a:1}
+   ]},
+  {type:"tf", labels:["P","F"], pts:0.5, pl:"Proszę posłuchać wywiadu i zdecydować, które zdania są prawdziwe (P), a które fałszywe (F).",
+   ko:"라디오 인터뷰를 듣고 문장이 내용과 맞으면 P(참), 틀리면 F(거짓)를 고르세요.",
+   rec:["K|Dzień dobry. Naszym gościem jest Adam Kowal, który w lipcu przejechał rowerem całą Polskę – od morza do gór. Panie Adamie, ile to trwało?",
+        "M|Dzień dobry. Podróż trwała dwanaście dni. Codziennie jechałem około osiemdziesięciu kilometrów, a dwa dni przeznaczyłem na odpoczynek.",
+        "K|Jechał pan sam?",
+        "M|Pierwszy tydzień jechałem z kolegą, ale on musiał wrócić do pracy. Dalej pojechałem sam. Szczerze mówiąc, samemu było trudniej, ale poznałem więcej ludzi.",
+        "K|Gdzie pan nocował?",
+        "M|Najczęściej na kempingach, czasem w małych pensjonatach. Kilka razy nocowałem też u ludzi, których poznałem po drodze. Polacy są bardzo gościnni!",
+        "K|Co było najtrudniejsze?",
+        "M|Pogoda. Przez trzy dni padał deszcz i było zimno. A ostatni etap, z Krakowa do Zakopanego, był bardzo męczący, bo cały czas jechałem pod górę.",
+        "K|Planuje pan następną podróż?",
+        "M|Tak, w przyszłym roku chcę przejechać wzdłuż Wisły, od źródła do morza. Tym razem zabiorę też namiot."],
+   items:[
+    {s:"Adam jechał przez Polskę od gór do morza.", a:false},
+    {s:"Podróż trwała prawie dwa tygodnie.", a:true},
+    {s:"Adam jechał dziennie około 80 kilometrów.", a:true},
+    {s:"Przez całą podróż jechał z kolegą.", a:false},
+    {s:"Samemu jechało się Adamowi łatwiej.", a:false},
+    {s:"Adam kilka razy spał u ludzi, których poznał w drodze.", a:true},
+    {s:"Przez cały czas była piękna pogoda.", a:false},
+    {s:"Ostatni etap był trudny, bo droga prowadziła pod górę.", a:true},
+    {s:"Następna podróż ma prowadzić wzdłuż Wisły.", a:true},
+    {s:"W tę podróż Adam zabrał namiot.", a:false}
+   ]},
+  {type:"match", pts:1, pl:"Proszę posłuchać wypowiedzi pięciu osób i dopasować do każdej osoby właściwe zdanie (A–F). Jedno zdanie jest niepotrzebne.",
+   ko:"다섯 사람의 말을 듣고 각 사람에게 맞는 문장(A–F)을 고르세요. 문장 하나는 남습니다. 주제: 출근하는 방법.",
+   opts:[{k:"A",s:"Ta osoba wykorzystuje czas podróży na naukę."},{k:"B",s:"Ta osoba prawie nie bywa w biurze."},
+         {k:"C",s:"Ta osoba musi jeździć samochodem, chociaż tego nie lubi."},{k:"D",s:"Ta osoba jeździ na rowerze niezależnie od pory roku."},
+         {k:"E",s:"Ta osoba ma blisko do pracy i chodzi piechotą."},{k:"F",s:"Ta osoba jeździ do pracy razem z kolegami."}],
+   items:[
+    {label:"Osoba 1", rec:["K|Jeżdżę rowerem przez cały rok, nawet zimą. Mam tylko pięć kilometrów, a w mieście rowerem jest najszybciej."], a:"D"},
+    {label:"Osoba 2", rec:["M|Pracuję z domu, więc nie muszę nigdzie dojeżdżać. Do biura jeżdżę tylko raz w miesiącu na zebranie."], a:"B"},
+    {label:"Osoba 3", rec:["K|Mieszkam pod miastem i nie ma u nas dobrej komunikacji. Muszę jeździć samochodem, chociaż korki są okropne."], a:"C"},
+    {label:"Osoba 4", rec:["M|Codziennie jadę godzinę pociągiem. Nie przeszkadza mi to, bo w tym czasie uczę się hiszpańskiego z aplikacji."], a:"A"},
+    {label:"Osoba 5", rec:["K|Chodzę do pracy pieszo. Mam piętnaście minut spacerem, a rano lubię pooddychać świeżym powietrzem."], a:"E"}
+   ]},
+  {type:"mc", pts:1, pl:"Proszę posłuchać rozmowy i zaznaczyć poprawną odpowiedź: A, B albo C.",
+   ko:"집을 구하는 남자와 집주인의 전화 통화를 듣고 맞는 답을 고르세요.",
+   rec:["M|Dzień dobry, dzwonię w sprawie ogłoszenia. Czy mieszkanie na Mokotowie jest jeszcze do wynajęcia?",
+        "K|Dzień dobry, tak, jest jeszcze wolne. To dwa pokoje z kuchnią, na trzecim piętrze.",
+        "M|Czy w budynku jest winda?",
+        "K|Niestety nie, budynek jest stary. Ale mieszkanie jest po remoncie, ma nową kuchnię i łazienkę.",
+        "M|Ile wynosi czynsz?",
+        "K|Dwa tysiące osiemset złotych miesięcznie plus rachunki za prąd i gaz. Do tego kaucja w wysokości jednego czynszu.",
+        "M|Rozumiem. Czy mogę mieszkać z psem? Mam małego psa.",
+        "K|Mały pies nie jest problemem, pod warunkiem że nie będzie niszczył mebli.",
+        "M|Świetnie. Od kiedy mieszkanie jest wolne?",
+        "K|Od pierwszego listopada. Może pan je obejrzeć w czwartek po osiemnastej.",
+        "M|Czwartek mi pasuje. Przyjdę o wpół do siódmej."],
+   items:[
+    {q:"Ile pokoi ma mieszkanie?", o:["Jeden.","Dwa.","Trzy."], a:1},
+    {q:"Jaki minus ma budynek?", o:["Nie ma w nim windy.","Ma starą kuchnię.","Jest w nim głośno."], a:0},
+    {q:"Ile wynosi czynsz?", o:["2800 zł razem z rachunkami.","2800 zł bez rachunków za prąd i gaz.","2800 zł razem z kaucją."], a:1},
+    {q:"Ile wynosi kaucja?", o:["Tyle co jeden czynsz.","Tyle co dwa czynsze.","Nie ma kaucji."], a:0},
+    {q:"Czy mężczyzna może mieszkać z psem?", o:["Nie.","Tak, jeśli pies nie będzie niszczył mebli.","Tak, ale zapłaci więcej."], a:1},
+    {q:"Od kiedy mieszkanie jest wolne?", o:["Od zaraz.","Od 1 października.","Od 1 listopada."], a:2},
+    {q:"O której mężczyzna obejrzy mieszkanie?", o:["O 18:00.","O 18:30.","O 19:30."], a:1}
+   ]},
+  {type:"note", pts:1, pl:"Proszę posłuchać wiadomości i uzupełnić notatkę. W każdą lukę proszę wpisać jedno lub dwa słowa albo liczbę.",
+   ko:"클럽 접수처의 음성 메시지를 듣고 메모의 빈칸을 채우세요. 낱말 한두 개나 숫자로 적습니다.",
+   rec:["K|Dzień dobry, tu recepcja klubu fitness Energia. Dzwonię w sprawie pana zapisu na zajęcia. Pierwsze zajęcia z trenerem odbędą się w poniedziałek, dwudziestego trzeciego stycznia, o godzinie siedemnastej. Trener nazywa się Robert Wiśniewski. Proszę zabrać ze sobą ręcznik i butelkę wody. Karnet miesięczny kosztuje sto czterdzieści złotych i można za niego zapłacić kartą na miejscu. Szatnia znajduje się na pierwszym piętrze. Do zobaczenia!"],
+   title:"KLUB ENERGIA – NOTATKA",
+   items:[
+    {label:"Pierwsze zajęcia: poniedziałek,", keys:["23","dwudziest"], show:"23 stycznia"},
+    {label:"Godzina:", keys:["17","siedemnast"], show:"17:00"},
+    {label:"Trener: Robert", keys:["wisniewsk"], show:"Wiśniewski"},
+    {label:"Zabrać: ręcznik i", keys:["wod"], show:"wodę"},
+    {label:"Karnet miesięczny (zł):", keys:["140","sto czterdziesci"], show:"140 zł"},
+    {label:"Płatność na miejscu:", keys:["kart"], show:"kartą"},
+    {label:"Szatnia: piętro nr", keys:["1","pierwsz"], show:"pierwsze"}
+   ]}
+ ],
+ read:[
+  {type:"mc", pts:1, pl:"Proszę przeczytać teksty i zaznaczyć poprawną odpowiedź: A, B albo C.",
+   ko:"짧은 글 5개를 읽고 맞는 답을 고르세요.",
+   items:[
+    {title:"Ogłoszenie", text:"Szukam opiekunki do psa na czas mojego wyjazdu służbowego (10–17 marca). Pies jest spokojny, potrzebuje dwóch spacerów dziennie. Płacę 60 zł za dzień. Tel. 600 100 200.",
+     q:"Osoba, która odpowie na ogłoszenie, będzie…", o:["opiekować się psem przez tydzień.","wychodzić z psem raz dziennie.","pracować w hotelu dla psów."], a:0},
+    {title:"Wiadomość", text:"Pani Ewo, jutro zebranie zespołu zaczyna się o 9.00, a nie o 10.00, bo dyrektor ma o jedenastej samolot. Proszę przygotować krótką prezentację o wynikach z marca. Pozdrawiam, Karol",
+     q:"Dlaczego zebranie będzie wcześniej?", o:["Pani Ewa ma prezentację.","Dyrektor musi zdążyć na samolot.","Wyniki z marca są złe."], a:1},
+    {title:"Regulamin pływalni", text:"Na basen wchodzimy wyłącznie w czepku. Dzieci do lat 10 mogą przebywać na basenie tylko pod opieką osoby dorosłej. Na terenie pływalni nie wolno jeść.",
+     q:"Na basenie…", o:["dzieci mogą pływać same.","trzeba mieć czepek.","można zjeść coś przy wodzie."], a:1},
+    {title:"Kartka", text:"Droga Pani Zofio, bardzo dziękuję za opiekę nad moimi kwiatami podczas urlopu. Wszystkie są w świetnej formie! W podziękowaniu zostawiam w Pani skrzynce zaproszenie do teatru. Pozdrawiam serdecznie, Halina z mieszkania nr 5",
+     q:"Halina…", o:["prosi sąsiadkę o podlewanie kwiatów.","dziękuje sąsiadce za pomoc.","zaprasza sąsiadkę na urlop."], a:1},
+    {title:"Ulotka z apteki", text:"Lek należy przyjmować dwa razy dziennie po posiłku. Nie wolno łączyć leku z alkoholem. Jeśli po trzech dniach objawy nie miną, należy skontaktować się z lekarzem.",
+     q:"Kiedy trzeba iść do lekarza?", o:["Po każdym posiłku.","Gdy po trzech dniach nadal ma się objawy.","Przed pierwszą dawką leku."], a:1}
+   ]},
+  {type:"match", pts:1, pl:"Proszę przeczytać notatki prasowe i dopasować do nich tytuły (A–G). Jeden tytuł jest niepotrzebny.",
+   ko:"짧은 기사 6개를 읽고 맞는 제목(A–G)을 고르세요. 제목 하나는 남습니다.",
+   opts:[{k:"A",s:"Bezpłatne posiłki w szkołach"},{k:"B",s:"Wolontariusze posprzątali brzeg morza"},{k:"C",s:"Nagroda dla polskiego filmu"},
+         {k:"D",s:"Problemy z wypłatą pieniędzy"},{k:"E",s:"Drożeje masło"},{k:"F",s:"Nowi mieszkańcy zoo"},{k:"G",s:"Nowa linia metra otwarta"}],
+   items:[
+    {label:"1", text:"Od września uczniowie szkół podstawowych w Gdyni dostaną darmowe obiady. Program będzie kosztował miasto kilka milionów złotych rocznie.", a:"A"},
+    {label:"2", text:"Ponad sto osób wzięło w sobotę udział w sprzątaniu plaży w Sopocie. Wolontariusze zebrali prawie tonę śmieci, głównie plastikowych butelek.", a:"B"},
+    {label:"3", text:"Polski film „Cisza” otrzymał główną nagrodę na międzynarodowym festiwalu filmowym. Reżyserka podziękowała ekipie i swojej rodzinie.", a:"C"},
+    {label:"4", text:"Z powodu awarii systemu w poniedziałek rano przez dwie godziny nie działały bankomaty jednego z dużych banków. Bank przeprasza klientów.", a:"D"},
+    {label:"5", text:"Cena masła w ostatnim miesiącu wzrosła o 15 procent. Ekonomiści przewidują, że do końca roku będzie dalej rosnąć.", a:"E"},
+    {label:"6", text:"W warszawskim zoo urodziły się dwie małe pandy czerwone. Zwiedzający będą mogli je zobaczyć dopiero wiosną.", a:"F"}
+   ]},
+  {type:"tf", labels:["TAK","NIE"], pts:0.5, pl:"Proszę przeczytać tekst i zdecydować, które zdania są zgodne z tekstem (TAK), a które nie (NIE).",
+   ko:"기사를 읽고 문장이 내용과 맞으면 TAK, 맞지 않으면 NIE를 고르세요.",
+   title:"Czy Polacy czytają?",
+   text:"Według najnowszych badań w ubiegłym roku co najmniej jedną książkę przeczytało około 40 procent Polaków. Oznacza to, że ponad połowa dorosłych nie sięgnęła po żadną książkę. Wynik jest podobny jak przed rokiem, ale wyraźnie niższy niż na początku XXI wieku.\n\nNajwięcej czytają osoby młode i dobrze wykształcone, a także kobiety – czytelniczki to prawie dwie trzecie wszystkich czytelników. Najpopularniejsze gatunki to kryminały, fantastyka i literatura obyczajowa.\n\nCoraz więcej osób sięga po audiobooki. Słuchają ich głównie kierowcy i osoby, które dojeżdżają do pracy komunikacją miejską. E-booki są mniej popularne, niż oczekiwano jeszcze kilka lat temu.\n\nEksperci podkreślają rolę rodziny. Dzieci, którym rodzice czytali na głos, w dorosłym życiu częściej same sięgają po książki. Dlatego wiele bibliotek organizuje spotkania dla rodziców z małymi dziećmi.",
+   items:[
+    {s:"Około 40 procent Polaków przeczytało w ubiegłym roku przynajmniej jedną książkę.", a:true},
+    {s:"Większość dorosłych Polaków czyta książki.", a:false},
+    {s:"Na początku XXI wieku Polacy czytali więcej niż teraz.", a:true},
+    {s:"Mężczyźni czytają więcej niż kobiety.", a:false},
+    {s:"Kryminały należą do najpopularniejszych gatunków.", a:true},
+    {s:"Audiobooków słuchają głównie emeryci.", a:false},
+    {s:"E-booki stały się bardzo popularne.", a:false},
+    {s:"Dzieci, którym czytano w domu, częściej czytają jako dorośli.", a:true},
+    {s:"Biblioteki organizują spotkania dla rodziców z dziećmi.", a:true},
+    {s:"Wynik jest dużo lepszy niż przed rokiem.", a:false}
+   ]},
+  {type:"mc", pts:1, pl:"Proszę przeczytać tekst i zaznaczyć poprawną odpowiedź: A, B albo C.",
+   ko:"긴 글을 읽고 맞는 답을 고르세요.",
+   title:"Rok w Poznaniu",
+   text:"Min-ji przyjechała do Poznania z Seulu rok temu, żeby studiować polonistykę. Wcześniej uczyła się polskiego przez dwa lata w Korei, ale – jak mówi – w pierwszym tygodniu prawie nic nie rozumiała. „Na lekcjach wszyscy mówili wolno i wyraźnie. A na ulicy ludzie mówili szybko i używali słów, których nie było w podręczniku” – opowiada.\n\nNajtrudniejsza była dla niej zima. „W Seulu też jest zimno, ale tutaj w grudniu o szesnastej jest już ciemno. Przez pierwsze tygodnie byłam ciągle zmęczona” – mówi. Pomogły jej spacery i zajęcia jogi, na które zapisała się z koleżanką z akademika.\n\nPolskiego najwięcej nauczyła się nie na uczelni, ale w kawiarni, w której pracuje dwa razy w tygodniu. „Klienci są cierpliwi. Kiedy się mylę, często mnie poprawiają, ale zawsze z uśmiechem” – śmieje się Min-ji. Dzięki pracy poznała też polskie zwyczaje, na przykład to, że w Wigilię Bożego Narodzenia je się dwanaście potraw.\n\nPo roku Min-ji mówi po polsku swobodnie. Planuje zostać w Polsce po studiach i pracować jako tłumaczka. „Tęsknię za rodziną i za koreańskim jedzeniem, ale Poznań to już mój drugi dom”.",
+   items:[
+    {q:"Min-ji przyjechała do Polski, żeby…", o:["pracować w kawiarni.","studiować.","uczyć koreańskiego."], a:1},
+    {q:"Przed przyjazdem Min-ji…", o:["w ogóle nie znała polskiego.","uczyła się polskiego w Korei.","mieszkała już w Poznaniu."], a:1},
+    {q:"Na początku Min-ji miała problem, bo ludzie na ulicy…", o:["nie chcieli z nią rozmawiać.","mówili szybko i używali nieznanych słów.","mówili tylko po angielsku."], a:1},
+    {q:"Zimą Min-ji było trudno, ponieważ…", o:["było bardzo zimno.","wcześnie robiło się ciemno.","nie miała ciepłych ubrań."], a:1},
+    {q:"Co pomogło Min-ji zimą?", o:["Ruch i joga.","Wyjazd do Korei.","Nauka w bibliotece."], a:0},
+    {q:"Min-ji najwięcej nauczyła się…", o:["na zajęciach na uczelni.","w pracy.","w akademiku."], a:1},
+    {q:"Klienci kawiarni…", o:["denerwują się, gdy Min-ji się myli.","życzliwie ją poprawiają.","mówią do niej po angielsku."], a:1},
+    {q:"Po studiach Min-ji chce…", o:["wrócić do Seulu.","pracować w Polsce jako tłumaczka.","otworzyć restaurację."], a:1}
+   ]},
+  {type:"gapsent", pts:1, pl:"Proszę uzupełnić tekst zdaniami A–G. Jedno zdanie jest niepotrzebne.",
+   ko:"글의 빈칸 [1]~[6]에 들어갈 문장을 A–G에서 고르세요. 문장 하나는 남습니다.",
+   title:"Jak oszczędzać energię w domu?",
+   text:"Rachunki za prąd i ogrzewanie są coraz wyższe. [1] Na szczęście kilka prostych zmian może obniżyć koszty nawet o kilkanaście procent.\n\nZacznijmy od ogrzewania. Temperatura w mieszkaniu nie musi przekraczać dwudziestu stopni. [2] W nocy można ją obniżyć jeszcze bardziej, bo pod kołdrą i tak jest ciepło.\n\nWażne jest też wietrzenie. Zamiast trzymać okno uchylone przez cały dzień, lepiej otworzyć je szeroko na kilka minut. [3]\n\nDuże znaczenie mają urządzenia elektryczne. [4] Telewizor czy ładowarka podłączone do prądu zużywają energię, nawet gdy z nich nie korzystamy.\n\nWarto też zwrócić uwagę na pranie. [5] Pralka zużywa wtedy dużo mniej prądu, a ubrania są równie czyste.\n\n[6] Kiedy cała rodzina zrozumie, dlaczego oszczędzamy, łatwiej będzie zmienić codzienne nawyki.",
+   opts:[{k:"A",s:"Dlatego wiele rodzin szuka sposobów na oszczędzanie."},{k:"B",s:"Każdy stopień mniej to kilka procent oszczędności."},
+         {k:"C",s:"W ten sposób powietrze się wymieni, a ściany nie zdążą się wychłodzić."},{k:"D",s:"Nie zostawiajmy ich w trybie czuwania."},
+         {k:"E",s:"W większości przypadków wystarczy prać w temperaturze 30 stopni."},{k:"F",s:"Na koniec najważniejsza rada: rozmawiajmy o oszczędzaniu z domownikami."},
+         {k:"G",s:"Najlepiej kupować nową lodówkę co dwa lata."}],
+   items:[{label:"[1]",a:"A"},{label:"[2]",a:"B"},{label:"[3]",a:"C"},{label:"[4]",a:"D"},{label:"[5]",a:"E"},{label:"[6]",a:"F"}]}
+ ],
+ gram:[
+  {type:"pick", pts:0.5, pl:"Proszę podkreślić poprawną formę wyrazów podanych w nawiasach.",
+   ko:"괄호 안에서 맞는 꼴을 고르세요. 명사·형용사·대명사·수사의 격.",
+   title:"Pierwszy dzień w pracy",
+   text:"Mój pierwszy dzień w {1} był stresujący. Rano długo szukałem {2}. Na recepcji przywitała mnie miła pani i dała mi {3} do szafki. Potem poznałem {4}. Pracuję z {5} w jednym pokoju. Na obiad poszliśmy do {6}. Zapłaciłem kartą, bo nie miałem przy sobie {7}. Wieczorem opowiadałem o wszystkim {8}.",
+   items:[
+    {o:["nowej firmie","nowa firma","nową firmę"],a:0,why:"w + 전치격"},
+    {o:["biura","biuro","biurem"],a:0,why:"szukać + 속격"},
+    {o:["klucze","kluczy","kluczami"],a:0,why:"dać + 대격"},
+    {o:["mojego szefa","mój szef","moim szefem"],a:0,why:"poznać + 대격 (남성 사람 = 속격 꼴)"},
+    {o:["trzema kolegami","trzy koledzy","trzech kolegów"],a:0,why:"z + 조격 (수사도 조격)"},
+    {o:["włoskiej restauracji","włoska restauracja","włoską restauracją"],a:0,why:"do + 속격"},
+    {o:["gotówki","gotówka","gotówką"],a:0,why:"부정문 → 속격"},
+    {o:["żonie","żona","żonę"],a:0,why:"opowiadać + 여격 (누구에게)"}
+   ]},
+  {type:"open", pts:0.5, pl:"Proszę uzupełnić zdania odpowiednią formą czasowników z nawiasów w czasie teraźniejszym.",
+   ko:"괄호 속 동사를 현재형으로 바꿔 쓰세요.",
+   items:[
+    {s:"Każdego dnia (ja, jeść) ___ śniadanie o siódmej.", a:["jem"]},
+    {s:"Gdzie (ty, pracować) ___?", a:["pracujesz"]},
+    {s:"Oni nie (rozumieć) ___ tego zadania.", a:["rozumieją"]},
+    {s:"(My, chcieć) ___ pojechać nad morze.", a:["chcemy"]},
+    {s:"Moja córka (pisać) ___ list do babci.", a:["pisze"]},
+    {s:"Czy (wy, móc) ___ mi pomóc?", a:["możecie"]}
+   ]},
+  {type:"open", pts:0.5, pl:"Proszę napisać czasowniki z nawiasów w czasie przeszłym.",
+   ko:"괄호 속 동사를 과거형으로 쓰세요. 주어의 성·수를 맞추세요.",
+   items:[
+    {s:"W zeszłym tygodniu (ja – kobieta, kupić) ___ nowy telefon.", a:["kupiłam"]},
+    {s:"Moi koledzy (przyjechać) ___ wczoraj z Niemiec.", a:["przyjechali"]},
+    {s:"Chłopaki, dlaczego nie (wy, przyjść) ___ na imprezę?", a:["przyszliście"]},
+    {s:"Dziecko (spać) ___ cały dzień.", a:["spało"]},
+    {s:"Ewa (móc) ___ przyjść wcześniej, ale nie chciała.", a:["mogła"]},
+    {s:"Wczoraj (my – kobiety, oglądać) ___ ciekawy film.", a:["oglądałyśmy"]}
+   ]},
+  {type:"pick", pts:0.5, pl:"Proszę podkreślić poprawną formę czasownika.",
+   ko:"알맞은 동사 꼴을 고르세요. 상(완료/불완료)·명령법·조건법.",
+   items:[
+    {s:"Czy już {1} obiad? Możemy wychodzić?", o:["zjadłeś","jadłeś"], a:0, why:"다 먹었는지 → 완료상"},
+    {s:"Przez całe wakacje {1} w kawiarni.", o:["pracowałam","popracowałam"], a:0, why:"기간 내내 → 불완료상"},
+    {s:"Zadzwoń, kiedy {1} pracę.", o:["skończysz","będziesz kończyć"], a:0, why:"끝난 시점 → 완료상 미래"},
+    {s:"Nie {1} do mnie po dwudziestej drugiej.", o:["dzwoń","zadzwoń"], a:0, why:"부정 명령 → 불완료상"},
+    {s:"Proszę {1} mi sól.", o:["podać","podawać"], a:0, why:"한 번의 부탁 → 완료상"},
+    {s:"Gdyby była ładna pogoda, {1} na spacer.", o:["poszlibyśmy","poszliśmy","pójdziemy"], a:0, why:"gdyby + 조건법"},
+    {s:"Chciałabym, żebyś mi {1}.", o:["pomógł","pomożesz","pomagasz"], a:0, why:"żeby + 과거형 꼴"},
+    {s:"Codziennie wieczorem {1} wiadomości.", o:["oglądam","obejrzę"], a:0, why:"습관 → 불완료상"}
+   ]},
+  {type:"pick", pts:0.5, pl:"Proszę podkreślić poprawną formę przymiotnika lub przysłówka.",
+   ko:"형용사·부사의 알맞은 비교 꼴을 고르세요.",
+   items:[
+    {s:"Dziś jest {1} niż wczoraj.", o:["cieplej","ciepło","najcieplej"], a:0, why:"niż → 부사 비교급"},
+    {s:"Ewa jest {1} w rodzinie.", o:["najmłodsza","młodsza","młoda"], a:0, why:"무리 안에서 → 최상급"},
+    {s:"Pociąg jest {1} niż autobus.", o:["szybszy","szybki","najszybszy"], a:0, why:"niż → 비교급"},
+    {s:"Ten test był {1} niż poprzedni.", o:["gorszy","zły","najgorszy"], a:0, why:"zły → gorszy (불규칙)"},
+    {s:"To {1} książka, jaką czytałem.", o:["najciekawsza","ciekawsza","ciekawa"], a:0, why:"최상급"},
+    {s:"Mówisz po polsku coraz {1}!", o:["lepiej","dobrze","najlepiej"], a:0, why:"coraz + 비교급"}
+   ]},
+  {type:"open", pts:0.5, pl:"Proszę zapisać liczby z nawiasów słownie w odpowiedniej formie.",
+   ko:"괄호 속 숫자를 알맞은 꼴의 낱말로 쓰세요.",
+   items:[
+    {s:"Kupiłam (3) ___ bilety.", a:["trzy"]},
+    {s:"Mieszkam tu od (10) ___ lat.", a:["dziesięciu"]},
+    {s:"W pokoju stoją (2) ___ krzesła.", a:["dwa"]},
+    {s:"Moja siostra ma (21) ___ lat.", a:["dwadzieścia jeden"]},
+    {s:"Pociąg odjeżdża o (12) ___.", a:["dwunastej"]},
+    {s:"Dziś jest (1) ___ maja.", a:["pierwszy"]}
+   ]},
+  {type:"bank", pts:0.5, pl:"Proszę uzupełnić tekst wyrazami z ramki. Jeden wyraz jest niepotrzebny.",
+   ko:"상자 안의 낱말로 빈칸을 채우세요. 낱말 하나는 남습니다. 전치사·접속사·관계사.",
+   words:["ale","więc","który","gdzie","od","po","z","na","jeśli"],
+   text:"Mieszkam w mieście, {1} urodził się mój dziadek. Pracuję tu {2} pięciu lat. Codziennie jeżdżę do pracy {3} rowerze, {4} zimą wolę autobus. {5} pracy często spotykam się {6} przyjaciółmi. Mam też psa, {7} bardzo lubi długie spacery. {8} jutro będzie ładna pogoda, pójdziemy do lasu.",
+   items:[{a:"gdzie"},{a:"od"},{a:"na"},{a:"ale"},{a:"po"},{a:"z"},{a:"który"},{a:"jeśli"}]},
+  {type:"trans", pts:1, pl:"Proszę dokończyć drugie zdanie tak, żeby miało ten sam sens co pierwsze. Proszę użyć wyrazu z nawiasu.",
+   ko:"첫 문장과 같은 뜻이 되도록 둘째 문장의 빈칸을 채우세요. 괄호 속 낱말을 알맞은 꼴로 씁니다.",
+   items:[
+    {s1:"Marek jest starszy od Ewy.", s2:"Ewa jest ___ niż Marek.", cue:"młody", a:["młodsza"]},
+    {s1:"Moja siostra uczy w szkole.", s2:"Moja siostra jest ___.", cue:"nauczycielka", a:["nauczycielką"]},
+    {s1:"Tomek był zmęczony po pracy.", s2:"Anna też była ___ po pracy.", cue:"zmęczony", a:["zmęczona"]},
+    {s1:"Nie mam samochodu, więc jeżdżę autobusem.", s2:"Gdybym ___ samochód, nie jeździłbym autobusem.", cue:"mieć", a:["miał"]},
+    {s1:"Lubię czytać.", s2:"Moim hobby jest ___.", cue:"czytać", a:["czytanie"]},
+    {s1:"To jest dom. Mieszka w nim mój brat.", s2:"To jest dom, w ___ mieszka mój brat.", cue:"który", a:["którym"]}
+   ]}
+ ]}
+];
+
+/* =======================================================================
+   실전 시험 엔진 — 과제(Zadanie) 단위로 풀고, 과목이 끝나야 채점한다.
+   통합 모의고사(fx)와 과목별 실전 연습(mx)이 같은 화면을 쓴다.
+   상태 st = {set, id, ans:{과제:{문항:값}}, played:{녹음키:횟수}, task, replay(연습 모드 다시 듣기), playing}
+   ======================================================================= */
+const RX_MODS={listen:{t:"듣기",pl:"Rozumienie ze słuchu",min:30},
+               read:{t:"독해",pl:"Rozumienie tekstów pisanych",min:40},
+               gram:{t:"문법",pl:"Poprawność gramatyczna",min:45}};
+const rxTaskMax=t=>t.items.length*t.pts;
+const fmtPts=x=>Number.isInteger(x)?String(x):x.toFixed(1).replace(".",",");
+const rxNorm=s=>String(s==null?"":s).toLowerCase().replace(/[.,!?;:„”"«»()]/g," ").replace(/\s+/g," ").trim();
+const rxHas=v=>v!==undefined&&v!==null&&v!=="";
+function rxNewSt(set,id,opt){
+  /* 괄호 고르기 보기는 응시할 때마다 순서를 섞는다 — 자리만 보고 맞히지 못하게 */
+  const perm={};
+  set[id].forEach((t,ti)=>{ if(t.type==="pick")t.items.forEach((it,ii)=>{ perm[ti+":"+ii]=shuffle(it.o.map((_,k)=>k)); }); });
+  return {set,id,ans:{},played:{},task:0,replay:!!(opt&&opt.replay),playing:null,perm};
+}
+const rxOrder=(st,ti,ii,it)=>(st&&st.perm&&st.perm[ti+":"+ii])||it.o.map((_,k)=>k);
+function rxItemOK(t,it,v){
+  if(!rxHas(v))return false;
+  switch(t.type){
+    case "open": case "trans": return it.a.some(a=>rxNorm(a)===rxNorm(v));
+    case "bank": return rxNorm(v)===rxNorm(it.a);
+    case "note": { const f=foldPl(rxNorm(v)); return it.keys.some(k=>f.indexOf(foldPl(k))>=0); }
+    default: return v===it.a;
+  }
+}
+/* 쓰기 문항에서 발음 구별 부호만 틀린 경우 — 실제 시험처럼 점수는 없지만 알려 준다 */
+const rxNear=(t,it,v)=>rxHas(v)&&(t.type==="open"||t.type==="trans")&&!rxItemOK(t,it,v)
+  &&it.a.some(a=>stripDia(rxNorm(a))===stripDia(rxNorm(v)));
+function rxScore(set,id,ans){
+  let got=0,max=0; const per=[];
+  set[id].forEach((t,ti)=>{ let g=0; t.items.forEach((it,ii)=>{ if(rxItemOK(t,it,(ans[ti]||{})[ii]))g+=t.pts; });
+    per.push([g,rxTaskMax(t)]); got+=g; max+=rxTaskMax(t); });
+  return {got,max,per};
+}
+const rxAnswered=st=>st.set[st.id].reduce((a,t,ti)=>a+t.items.filter((_,ii)=>rxHas((st.ans[ti]||{})[ii])).length,0);
+const rxTotal=st=>st.set[st.id].reduce((a,t)=>a+t.items.length,0);
+
+/* ---- 녹음 재생: 대화는 두 목소리로 ----
+   폴란드어 음성이 둘 이상이면 여자·남자 목소리를 나누고, 하나뿐이면 높낮이로 가른다. */
+function rxVoices(){
+  const pl=(window.speechSynthesis?speechSynthesis.getVoices():[]).filter(v=>/^pl/i.test(v.lang||""));
+  const K=pl.find(v=>/zosia|ewa|paulina|agnieszka|maja|female|kobieta/i.test(v.name))||pl[0]||null;
+  const M=pl.find(v=>/krzysztof|jacek|jan\b|adam|marek|male|mężczyzna/i.test(v.name))||pl.find(v=>v!==K)||K;
+  return {K,M,N:pl[0]||null};
+}
+function rxPlay(lines,onEnd){
+  if(!window.speechSynthesis){ if(onEnd)onEnd(false); return; }
+  speechSynthesis.cancel();
+  const V=rxVoices(), same=!V.K||!V.M||V.K===V.M;
+  lines.forEach((ln,i)=>{
+    const m=/^([KMN])\|([\s\S]*)$/.exec(ln), who=m?m[1]:"N", text=m?m[2]:ln;
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang="pl-PL"; u.rate=0.95;
+    const v=V[who]; if(v)u.voice=v;
+    u.pitch=who==="K"?(same?1.3:1):who==="M"?(same?0.75:1):1;
+    if(i===lines.length-1){ u.onend=()=>onEnd&&onEnd(true); u.onerror=()=>onEnd&&onEnd(false); }
+    speechSynthesis.speak(u);
+  });
+}
+const rxLines=(st,key)=>{ const [ti,ii]=String(key).split(":"), t=st.set[st.id][+ti]; return ii==null?t.rec:t.items[+ii].rec; };
+function rxPlayer(st,key,label){
+  const n=st.played[key]||0, max=st.replay?99:1, left=max-n, on=st.playing===key;
+  const noTTS=!window.speechSynthesis;
+  return `<div class="rx-play" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 10px">
+    <button class="btn ${n&&!on?"ghost":""} sm" data-rxp="${key}" ${(left<=0&&!on)||noTTS?"disabled":""}>${on?"■ 재생 중…":n?(left>0?"▶ 다시 듣기":"✓ 재생 끝"):"▶ "+(label||"녹음 듣기")}</button>
+    <span style="font-size:12px;color:var(--ink-3)">${noTTS?"이 브라우저는 음성 재생을 지원하지 않습니다 — 채점 뒤 대본으로 확인하세요."
+      :max===1?(n?"녹음은 한 번만 재생됩니다 (실제 시험과 같음)":"실제 시험처럼 한 번만 재생됩니다. 질문을 먼저 읽고 누르세요."):"연습 모드 — 여러 번 들을 수 있습니다"}</span></div>`;
+}
+const RX_LET=["A","B","C","D","E","F","G"];
+function rxBtn(ti,ii,val,label,sel,extra){
+  return `<button class="rx-o${sel?" on":""}" data-rxa="${ti}:${ii}" data-rxv="${esc(String(val))}" ${extra||""}>${label}</button>`;
+}
+function rxParas(text){ return String(text).split(/\n\n/).map(p=>`<p style="margin:0 0 10px">${p}</p>`).join(""); }
+/* 지문 속 빈칸 — pick(괄호 고르기) · bank(상자 낱말) · gapsent(문장 넣기) */
+function rxTextHtml(t,ti,A,st){
+  let h=esc(t.text);
+  if(t.type==="pick")h=h.replace(/\{(\d+)\}/g,(_,n)=>{ const ii=+n-1, it=t.items[ii];
+    return `<span class="rx-gap"><sup>${n}</sup>(${rxOrder(st,ti,ii,it).map(k=>rxBtn(ti,ii,k,esc(it.o[k]),A[ii]===k)).join(" / ")})</span>`; });
+  if(t.type==="bank")h=h.replace(/\{(\d+)\}/g,(_,n)=>{ const ii=+n-1;
+    return `<span class="rx-gap"><sup>${n}</sup><select class="rx-sel" data-rxs="${ti}:${ii}"><option value="">……</option>${t.words.map(w=>`<option ${A[ii]===w?"selected":""}>${esc(w)}</option>`).join("")}</select></span>`; });
+  if(t.type==="gapsent")h=h.replace(/\[(\d+)\]/g,(_,n)=>{ const ii=+n-1, v=A[ii];
+    return `<span class="rx-gap" style="font-weight:700">[${n}${rxHas(v)?" → "+v:""}]</span>`; });
+  return rxParas(h);
+}
+function rxTaskHtml(st){
+  const ti=st.task, t=st.set[st.id][ti], A=st.ans[ti]||{};
+  const box=(inner)=>`<div style="background:var(--wash);border-radius:var(--rlg);padding:18px 20px;margin:10px 0 16px;line-height:1.85;font-size:15.5px" class="pl">${inner}</div>`;
+  let h=`<div class="eyebrow">Zadanie ${ti+1} · ${fmtPts(rxTaskMax(t))} pkt · ${t.items.length}문항 × ${fmtPts(t.pts)}점</div>
+    <p class="pl" style="font-weight:680;font-size:16.5px;margin:10px 0 4px;line-height:1.5">${esc(t.pl)}</p>
+    <p class="lede" style="margin:0 0 12px">${esc(t.ko)}</p>`;
+  if(t.rec)h+=rxPlayer(st,String(ti));
+  if(t.opts&&(t.type==="match"||t.type==="gapsent"))
+    h+=`<div class="card pad" style="box-shadow:none;margin:6px 0 14px;padding:14px 18px">${t.opts.map(o=>
+      `<div class="pl" style="padding:4px 0;font-size:15px"><b style="display:inline-block;width:22px">${o.k}</b>${esc(o.s)}</div>`).join("")}</div>`;
+  if(t.type==="bank")h+=`<div class="chip-row" style="margin:0 0 6px">${t.words.map(w=>`<span class="chip pl" style="font-size:13.5px;font-weight:650;color:var(--ink-2)">${esc(w)}</span>`).join("")}</div>`;
+  if(t.text)h+=box(`${t.title?`<div style="font-weight:700;margin-bottom:8px">${esc(t.title)}</div>`:""}${rxTextHtml(t,ti,A,st)}`);
+  else if(t.title&&t.type==="note")h+=`<div class="eyebrow" style="margin:8px 0">${esc(t.title)}</div>`;
+  else if(t.title&&t.type==="pick")h+=`<div style="font-weight:700;margin:6px 0">${esc(t.title)}</div>`;
+  const rows=t.items.map((it,ii)=>{
+    const v=A[ii];
+    switch(t.type){
+      case "mc": return `<div class="rx-it">${it.rec?rxPlayer(st,ti+":"+ii,"nagranie "+(ii+1)):""}
+          ${it.text?box(`${it.title?`<div style="font-weight:700;margin-bottom:6px">${esc(it.title)}</div>`:""}${esc(it.text)}`):""}
+          <div class="pl" style="font-weight:620;margin:4px 0 8px"><span class="mono" style="color:var(--ink-3);margin-right:6px">${ii+1}.</span>${esc(it.q)}</div>
+          <div class="rx-col">${it.o.map((o,k)=>rxBtn(ti,ii,k,`<b>${RX_LET[k]}</b> ${esc(o)}`,v===k,'style="text-align:left"')).join("")}</div></div>`;
+      case "tf": return `<div class="rx-row"><span class="mono" style="color:var(--ink-3);min-width:22px">${ii+1}.</span>
+          <span class="pl" style="flex:1">${esc(it.s)}</span>
+          <span style="display:flex;gap:6px">${rxBtn(ti,ii,1,t.labels[0],v===true)}${rxBtn(ti,ii,0,t.labels[1],v===false)}</span></div>`;
+      case "match": return `<div class="rx-it"><div style="font-weight:680;margin-bottom:4px">${esc(it.label)}</div>
+          ${it.rec?rxPlayer(st,ti+":"+ii,it.label):""}${it.text?box(esc(it.text)):""}
+          <div style="display:flex;gap:6px;flex-wrap:wrap">${t.opts.map(o=>rxBtn(ti,ii,o.k,o.k,v===o.k)).join("")}</div></div>`;
+      case "gapsent": return `<div class="rx-row"><b style="min-width:34px">${esc(it.label)}</b>
+          <span style="display:flex;gap:6px;flex-wrap:wrap">${t.opts.map(o=>rxBtn(ti,ii,o.k,o.k,v===o.k)).join("")}</span></div>`;
+      case "note": return `<div class="rx-row"><span class="pl" style="flex:1 1 220px">${esc(it.label)}</span>
+          <input class="search pin" style="flex:1 1 200px;max-width:280px;padding:8px 12px" data-rxi="${ti}:${ii}" value="${esc(v||"")}" autocomplete="off" spellcheck="false"></div>`;
+      case "pick": return t.text?"":`<div class="rx-row pl" style="flex-wrap:wrap;line-height:2.1"><span class="mono" style="color:var(--ink-3);min-width:22px">${ii+1}.</span>
+          ${esc(it.s).replace("{1}",`(${rxOrder(st,ti,ii,it).map(k=>rxBtn(ti,ii,k,esc(it.o[k]),v===k)).join(" / ")})`)}</div>`;
+      case "open": { const [a,b]=it.s.split("___");
+        return `<div class="rx-row pl" style="flex-wrap:wrap"><span class="mono" style="color:var(--ink-3);min-width:22px">${ii+1}.</span>
+          ${esc(a)}<input class="search pin" style="width:170px;padding:6px 10px;display:inline-block" data-rxi="${ti}:${ii}" value="${esc(v||"")}" autocomplete="off" autocapitalize="off" spellcheck="false">${esc(b||"")}</div>`; }
+      case "trans": { const [a,b]=it.s2.split("___");
+        return `<div class="rx-it pl"><div><span class="mono" style="color:var(--ink-3);margin-right:6px">${ii+1}.</span>${esc(it.s1)}</div>
+          <div style="margin-top:6px;padding-left:26px">${esc(a)}<input class="search pin" style="width:180px;padding:6px 10px;display:inline-block" data-rxi="${ti}:${ii}" value="${esc(v||"")}" autocomplete="off" autocapitalize="off" spellcheck="false">${esc(b||"")}
+          <span style="color:var(--ink-3)">(${esc(it.cue)})</span></div></div>`; }
+      default: return "";
+    }
+  }).join("");
+  if(t.type!=="bank"&&!(t.type==="pick"&&t.text))h+=`<div class="rx-items">${rows}</div>`;
+  return h;
+}
+/* 과목 화면 — 위 막대는 부르는 쪽이 준다 */
+function rxModuleHtml(st,bar,doneLabel){
+  const tasks=st.set[st.id];
+  return `${bar}
+  <div class="xsteps" style="margin:14px 0 12px">${tasks.map((t,i)=>{const n=t.items.filter((_,ii)=>rxHas((st.ans[i]||{})[ii])).length;
+    return `<button class="xstep ${i===st.task?"on":""}" data-rxt="${i}">Zadanie ${i+1} <span style="opacity:.75;font-weight:500">${n}/${t.items.length}</span></button>`;}).join("")}</div>
+  <div class="card pad" id="rxTask">${rxTaskHtml(st)}</div>
+  <div class="inline" style="margin-top:14px">
+    <button class="btn ghost" data-rxt="${st.task-1}" ${st.task===0?"disabled":""}>← 이전 과제</button>
+    <button class="btn ghost" data-rxt="${st.task+1}" ${st.task>=tasks.length-1?"disabled":""}>다음 과제 →</button>
+    <button class="btn red" id="rxDone" style="margin-left:auto">${doneLabel} (${rxAnswered(st)}/${rxTotal(st)})</button>
+  </div>`;
+}
+function rxBind(v,st,onDone){
+  v.querySelectorAll("[data-rxt]").forEach(b=>b.onclick=()=>{ const n=+b.dataset.rxt; if(n<0||n>=st.set[st.id].length)return;
+    st.task=n; render(); window.scrollTo(0,0); });
+  v.querySelectorAll("[data-rxa]").forEach(b=>b.onclick=()=>{
+    const [ti,ii]=b.dataset.rxa.split(":").map(Number), t=st.set[st.id][ti], raw=b.dataset.rxv;
+    const val=(t.type==="mc"||t.type==="pick")?+raw:t.type==="tf"?raw==="1":raw;
+    (st.ans[ti]=st.ans[ti]||{})[ii]=val;
+    const y=window.scrollY; render(); window.scrollTo(0,y);
+  });
+  v.querySelectorAll("[data-rxs]").forEach(s=>s.onchange=()=>{ const [ti,ii]=s.dataset.rxs.split(":").map(Number);
+    (st.ans[ti]=st.ans[ti]||{})[ii]=s.value; const y=window.scrollY; render(); window.scrollTo(0,y); });
+  v.querySelectorAll("[data-rxi]").forEach(inp=>inp.oninput=()=>{ const [ti,ii]=inp.dataset.rxi.split(":").map(Number);
+    (st.ans[ti]=st.ans[ti]||{})[ii]=inp.value.slice(0,80);
+    const d=$("#rxDone",v); if(d)d.textContent=d.textContent.replace(/\(\d+\/\d+\)/,`(${rxAnswered(st)}/${rxTotal(st)})`); });
+  v.querySelectorAll("[data-rxp]").forEach(b=>b.onclick=()=>{
+    const key=b.dataset.rxp;
+    if(st.playing===key){ speechSynthesis.cancel(); st.playing=null; const y=window.scrollY; render(); window.scrollTo(0,y); return; }
+    if((st.played[key]||0)>=(st.replay?99:1))return;
+    st.played[key]=(st.played[key]||0)+1; st.playing=key;
+    const y=window.scrollY; render(); window.scrollTo(0,y);
+    rxPlay(rxLines(st,key),()=>{ if(st.playing===key){ st.playing=null; const y2=window.scrollY; render(); window.scrollTo(0,y2); } });
+  });
+  const d=$("#rxDone",v); if(d)d.onclick=onDone;
+}
+/* 채점 뒤 해설 — 과제별 점수, 내 답과 정답, 대본·지문 */
+function rxValText(t,it,v){
+  if(!rxHas(v))return "(무응답)";
+  if(t.type==="mc"||t.type==="pick")return (t.type==="mc"?RX_LET[v]+" ":"")+it.o[v];
+  if(t.type==="tf")return v?t.labels[0]:t.labels[1];
+  return String(v);
+}
+function rxKeyText(t,it){
+  if(t.type==="mc"||t.type==="pick")return (t.type==="mc"?RX_LET[it.a]+" ":"")+it.o[it.a];
+  if(t.type==="tf")return it.a?t.labels[0]:t.labels[1];
+  if(t.type==="match"||t.type==="gapsent"){ const o=t.opts.find(x=>x.k===it.a); return it.a+(o?" — "+o.s:""); }
+  if(t.type==="note")return it.show;
+  if(t.type==="open"||t.type==="trans")return it.a.join(" / ");
+  return String(it.a);
+}
+function rxItemLabel(t,it,ii){
+  if(t.type==="mc")return it.q; if(t.type==="tf")return it.s;
+  if(t.type==="match"||t.type==="gapsent")return it.label; if(t.type==="note")return it.label;
+  if(t.type==="pick")return it.s?it.s.replace("{1}","___"):`(${ii+1}) ${it.o.join(" / ")}`;
+  if(t.type==="open")return it.s; if(t.type==="trans")return it.s1+" → "+it.s2+" ("+it.cue+")";
+  if(t.type==="bank")return `(${ii+1})`;
+  return "";
+}
+function rxScript(lines){ return lines.map(l=>{ const m=/^([KMN])\|([\s\S]*)$/.exec(l);
+  return `<div style="margin:2px 0">${m&&m[1]!=="N"?`<b style="color:var(--ink-3);font-size:12px;margin-right:6px">${m[1]==="K"?"Kobieta":"Mężczyzna"}</b>`:""}${esc(m?m[2]:l)}</div>`; }).join(""); }
+function rxReviewHtml(set,id,ans){
+  const r=rxScore(set,id,ans);
+  return set[id].map((t,ti)=>{
+    const A=ans[ti]||{};
+    const scripts=[t.rec].concat(t.items.map(it=>it.rec)).filter(Boolean);
+    return `<div class="card pad" style="margin-top:12px">
+      <div class="inline" style="justify-content:space-between"><div class="eyebrow">Zadanie ${ti+1}</div>
+        <span class="mono" style="font-weight:700;color:${r.per[ti][0]>=r.per[ti][1]/2?"var(--good)":"var(--bad)"}">${fmtPts(r.per[ti][0])} / ${fmtPts(r.per[ti][1])} pkt</span></div>
+      <div class="pl" style="font-size:13.5px;color:var(--ink-2);margin:4px 0 8px">${esc(t.pl)}</div>
+      ${t.items.map((it,ii)=>{ const v=A[ii], ok=rxItemOK(t,it,v), near=rxNear(t,it,v);
+        return `<div class="wrongrow" style="align-items:flex-start">
+          <span style="min-width:18px;font-weight:700;color:${ok?"var(--good)":"var(--bad)"}">${ok?"✓":"✗"}</span>
+          <span class="pl" style="flex:1 1 240px;font-size:14px">${esc(rxItemLabel(t,it,ii))}</span>
+          <span style="flex:1 1 220px;font-size:13.5px">${ok?`<span class="cr pl">${esc(rxValText(t,it,v))}</span>`
+            :`<span class="yr pl">${esc(rxValText(t,it,v))}</span> → <span class="cr pl">${esc(rxKeyText(t,it))}</span>${near?` <span style="color:var(--amber);font-size:12px">발음 구별 부호만 틀림 — 실제 시험에서도 0점</span>`:""}`}
+            ${it.why?`<div style="font-size:12px;color:var(--ink-3)">${esc(it.why)}</div>`:""}</span></div>`; }).join("")}
+      ${scripts.length?`<details class="model"><summary>녹음 대본 보기</summary><div class="pl" style="font-size:14.5px;line-height:1.75;margin-top:8px">${scripts.map(rxScript).join('<hr style="border:0;border-top:1px solid var(--line-2);margin:8px 0">')}</div>
+        <button class="btn ghost sm" data-say="${esc(scripts.flat().map(l=>l.replace(/^[KMN]\|/,"")).join(" "))}">🔊 대본 듣기</button></details>`:""}
+    </div>`;
+  }).join("");
+}
+
+/* ---- 과목별 실전 연습 (mx) ---- */
+let mx=null, rxSetPick="rand", rxReplay=false;
+const rxPickSet=()=>rxSetPick==="rand"?RX_SETS[Math.floor(Math.random()*RX_SETS.length)]:(RX_SETS.find(s=>s.id===rxSetPick)||RX_SETS[0]);
+function mxStart(id){
+  const set=rxPickSet();
+  mx={st:rxNewSt(set,id,{replay:id==="listen"&&rxReplay}), ends:Date.now()+RX_MODS[id].min*60000, timer:null, done:false, recorded:false};
+  mx.timer=setInterval(()=>{
+    if(!mx||mx.done){ clearInterval(mx&&mx.timer); return; }
+    const left=Math.max(0,Math.floor((mx.ends-Date.now())/1000)), el=document.getElementById("mxClock");
+    if(el){ el.textContent=mmss(left); el.style.color=left<=120?"var(--bad)":left<=300?"var(--amber)":"var(--ink-2)"; }
+    if(left<=0){ clearInterval(mx.timer); if(window.speechSynthesis)speechSynthesis.cancel(); mx.done=true; render(); window.scrollTo(0,0);
+      notify("시간 종료","실제 시험에서는 여기서 답안지를 걷습니다. 지금까지 쓴 답으로 채점했습니다."); }
+  },1000);
+  render(); window.scrollTo(0,0);
+}
+function mxView(v){
+  const st=mx.st, m=RX_MODS[st.id];
+  if(mx.done)return mxResult(v);
+  const left=Math.max(0,Math.floor((mx.ends-Date.now())/1000));
+  const bar=`<div class="qbar" style="margin-top:24px">
+    <span>${m.t} · ${esc(st.set.t)}</span>
+    <span class="track"><i style="width:${rxAnswered(st)/rxTotal(st)*100}%"></i></span>
+    <span id="mxClock" style="font-weight:700">${mmss(left)}</span>
+    <button class="icon-btn" id="mxQuit">그만두기</button></div>
+    <div class="pl" style="font-size:13px;color:var(--ink-3);margin-top:6px">${esc(m.pl)} · ${m.min} min · 30 pkt · 합격선 15 pkt</div>`;
+  v.innerHTML=rxModuleHtml(st,bar,"제출하기");
+  rxBind(v,st,()=>{
+    const left=rxTotal(st)-rxAnswered(st);
+    const go=()=>{ if(window.speechSynthesis)speechSynthesis.cancel(); clearInterval(mx.timer); mx.done=true; render(); window.scrollTo(0,0); };
+    if(left)askConfirm("제출할까요?",`아직 <b>${left}문항</b>이 비어 있습니다. 비운 문항은 0점입니다.`,go,"제출"); else go();
+  });
+  $("#mxQuit",v).onclick=()=>askConfirm("연습을 그만둘까요?","채점되지 않고 기록도 남지 않습니다.",
+    ()=>{ if(window.speechSynthesis)speechSynthesis.cancel(); clearInterval(mx.timer); mx=null; render(); window.scrollTo(0,0); },"그만두기");
+}
+function mxResult(v){
+  const st=mx.st, m=RX_MODS[st.id], r=rxScore(st.set,st.id,st.ans), pass=r.got>=r.max/2;
+  if(!mx.recorded){ mx.recorded=true;
+    S.mexams=(S.mexams||[]).concat([{id:st.id,set:st.set.id,pts:r.got}]).slice(-30); save(); }
+  v.innerHTML=`<h2 class="sec">${m.t} 실전 연습 결과 · ${esc(st.set.t)}</h2>
+  <div class="card pad" style="text-align:center">
+    <div class="score" style="color:${pass?"var(--good)":"var(--bad)"}">${fmtPts(r.got)}<span style="font-size:22px;color:var(--ink-3)">/${r.max}</span></div>
+    <div style="margin-top:10px;font-size:18px;font-weight:700;color:${pass?"var(--good)":"var(--bad)"}">${pass?"합격선(50%)을 넘었습니다":"합격선(50%)에 못 미쳤습니다"}</div>
+    <p class="lede" style="margin:10px auto 0;text-align:center">실제 시험은 과목마다 따로 50%를 넘어야 합니다. 아래에서 과제별로 틀린 곳과 정답을 확인하세요.</p>
+    <div class="inline" style="justify-content:center;margin-top:14px">
+      <button class="btn red" id="mxAgain">같은 과목 다시 (다른 시험지)</button>
+      <button class="btn ghost" id="mxHome">모의고사 첫 화면</button></div>
+  </div>
+  ${rxReviewHtml(st.set,st.id,st.ans)}`;
+  const id=st.id, cur=st.set.id;
+  $("#mxAgain",v).onclick=()=>{ const keep=rxSetPick; const others=RX_SETS.filter(s=>s.id!==cur); rxSetPick=(others[0]||RX_SETS[0]).id; mx=null; mxStart(id); rxSetPick=keep; };
+  $("#mxHome",v).onclick=()=>{ mx=null; render(); window.scrollTo(0,0); };
+}
+
+/* 실전 시험 화면 스타일 — 고른 보기는 실제 답안처럼 밑줄로 보인다 */
+(function(){ const css=`
+.rx-o{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:7px 12px;font:inherit;font-size:14.5px;cursor:pointer;line-height:1.45}
+.rx-o:hover{border-color:var(--ink-3)}
+.rx-o.on{background:color-mix(in srgb,var(--carmine) 11%,transparent);border-color:var(--carmine);color:var(--carmine);font-weight:650;text-decoration:underline;text-underline-offset:3px}
+.rx-gap{white-space:normal}
+.rx-gap .rx-o{padding:1px 7px;font-size:15px;margin:2px 0}
+.rx-gap sup{color:var(--ink-3);font-family:var(--font-mono);font-size:10.5px;margin-right:2px}
+.rx-col{display:flex;flex-direction:column;gap:6px}
+.rx-row{display:flex;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line-2)}
+.rx-it{padding:14px 0;border-top:1px solid var(--line-2)}
+.rx-items>:first-child{border-top:0}
+.rx-sel{font:inherit;font-size:15px;padding:2px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink)}
+@media (max-width:640px){.rx-row{flex-wrap:wrap}}`;
+  const el=document.createElement("style"); el.textContent=css; document.head.appendChild(el); })();
+
 const FULL_MODS=[
   {id:"listen",t:"듣기",  pl:"Rozumienie ze słuchu",       min:30, pts:30},
+  {id:"read",  t:"독해",  pl:"Rozumienie tekstów pisanych",min:40, pts:30},
   {id:"gram",  t:"문법",  pl:"Poprawność gramatyczna",     min:45, pts:30},
-  {id:"read",  t:"독해",  pl:"Rozumienie tekstów pisanych",min:45, pts:30},
-  {id:"write", t:"쓰기",  pl:"Pisanie",                    min:70, pts:30},
+  {id:"write", t:"쓰기",  pl:"Pisanie",                    min:75, pts:30},
   {id:"speak", t:"말하기",pl:"Mówienie",                   min:15, pts:40}
 ];
 let fx=null;
 
 function startFull(){
-  const all=buildExam();
-  fx={m:0,
-      items:{listen:all.filter(x=>x.sec==="listen"),
-             gram:  all.filter(x=>x.sec==="gram"||x.sec==="vocab"),
-             read:  all.filter(x=>x.sec==="read")},
-      ans:{listen:[],gram:[],read:[]}, i:{listen:0,gram:0,read:0},
-      wset:WRITE[Math.floor(Math.random()*WRITE.length)], wpart:0, wtext:["",""],
+  const set=rxPickSet();
+  const wpool=WRITE.filter(w=>!w.lv||w.lv==="B1");
+  fx={m:0, set,
+      rx:{listen:rxNewSt(set,"listen"),read:rxNewSt(set,"read"),gram:rxNewSt(set,"gram")},
+      wopts:pick(wpool.length>=3?wpool:WRITE,3), wset:null, wpart:0, wtext:["",""],
       sset:SPEAK[Math.floor(Math.random()*SPEAK.length)], stask:0, stext:["","",""],
       ev:{write:[null,null],speak:[null,null,null]},
       ends:0, timer:null, grading:false, done:false, res:null, recorded:false};
@@ -31579,6 +32365,8 @@ function fullTimer(){
 }
 function fullNext(auto){
   freeStop();
+  if(window.speechSynthesis)speechSynthesis.cancel();
+  if(FULL_MODS[fx.m].id==="write"&&!fx.wset)fx.wset=fx.wopts[0];
   if(fx.m>=FULL_MODS.length-1){ fx.done=true; if(fx.timer)clearInterval(fx.timer); render(); window.scrollTo(0,0); return; }
   const go=()=>{ fx.m++; fullTimer(); render(); window.scrollTo(0,0); };
   if(auto)go();
@@ -31605,7 +32393,13 @@ function viewFull(v){
   const id=FULL_MODS[fx.m].id;
   if(id==="write")return fullWrite(v);
   if(id==="speak")return fullSpeak(v);
-  return fullQuiz(v,id);
+  return fullRx(v,id);
+}
+function fullRx(v,id){
+  const st=fx.rx[id], m=FULL_MODS[fx.m];
+  v.innerHTML=rxModuleHtml(st,fullBar()+`<div class="pl" style="font-size:13px;color:var(--ink-3);margin-top:6px">${esc(m.pl)} · ${esc(st.set.t)} · ${m.min} min · ${m.pts} pkt</div>`,m.t+" 마치기");
+  bindQuit(v);
+  rxBind(v,st,()=>fullNext(false));
 }
 /* ---- 객관식 세 과목 (듣기·문법·독해) ---- */
 function fullQuiz(v,id){
@@ -31643,6 +32437,17 @@ function fullQuiz(v,id){
 }
 /* ---- 쓰기 ---- */
 function fullWrite(v){
+  if(!fx.wset){
+    v.innerHTML=`${fullBar()}<div class="card pad" style="margin-top:14px">
+      <div class="eyebrow">Pisanie · 75 min · 30 pkt</div>
+      <p class="pl" style="font-weight:680;font-size:16.5px;margin:10px 0 4px">Proszę wybrać jeden z zestawów i wykonać obydwa zadania (a i b).</p>
+      <p class="lede" style="margin:0 0 14px">실제 시험처럼 세 세트 중 하나를 골라 짧은 글(a)과 긴 글(b)을 모두 씁니다. 고른 뒤에는 바꿀 수 없습니다.</p>
+      <div class="grid g3">${fx.wopts.map((w,i)=>`<button class="qtype" data-wsel="${i}"><b>Zestaw ${i+1} · ${esc(w.t)}</b>
+        <small>a) ${esc(w.short.form)} · ${w.short.min}–${w.short.max} słów<br>b) ${esc(w.long.form)} · ${w.long.min}–${w.long.max} słów</small></button>`).join("")}</div></div>`;
+    bindQuit(v);
+    v.querySelectorAll("[data-wsel]").forEach(b=>b.onclick=()=>{ fx.wset=fx.wopts[+b.dataset.wsel]; fx.wpart=0; render(); window.scrollTo(0,0); });
+    return;
+  }
   const w=fx.wset, part=fx.wpart?w.long:w.short, txt=fx.wtext[fx.wpart];
   const n=wcount(txt), ok=n>=part.min&&n<=part.max;
   v.innerHTML=`${fullBar()}
@@ -31719,9 +32524,8 @@ function fullSpeak(v){
    0~10점을 과목 점수로 바꾼다. 평가를 못 하는 환경에서는 '미채점'으로 남기고
    총평을 내리지 않는다 — 없는 점수를 지어내지 않기 위해서다. */
 function objScore(id){
-  const items=fx.items[id]; if(!items.length)return {got:0,max:0,pts:0};
-  const got=items.filter((it,i)=>fx.ans[id][i]===it.ans).length;
-  return {got, max:items.length, pts:Math.round(got/items.length*30)};
+  const r=rxScore(fx.set,id,fx.rx[id].ans);
+  return {got:r.got, max:r.max, pts:r.got};
 }
 function evScore(ev){ return ev?(ev.scores.plyn+ev.scores.gram+ev.scores.slow+ev.scores.zad):null; }
 async function fullGrade(){
@@ -31754,9 +32558,9 @@ function fullResult(v){
   const wPts=wDone?Math.round(evScore(wEv[0])/40*10+evScore(wEv[1])/40*20):null;
   const sPts=sDone?Math.round(sEv.reduce((a,e)=>a+evScore(e),0)/3):null;
   const rows=[
-    {m:FULL_MODS[0], pts:listen.pts, sub:`${listen.got}/${listen.max} 정답`},
-    {m:FULL_MODS[1], pts:gram.pts,   sub:`${gram.got}/${gram.max} 정답`},
-    {m:FULL_MODS[2], pts:read.pts,   sub:`${read.got}/${read.max} 정답`},
+    {m:FULL_MODS[0], pts:listen.pts, sub:`${fmtPts(listen.got)}/${listen.max}점`},
+    {m:FULL_MODS[1], pts:read.pts,   sub:`${fmtPts(read.got)}/${read.max}점`},
+    {m:FULL_MODS[2], pts:gram.pts,   sub:`${fmtPts(gram.got)}/${gram.max}점`},
     {m:FULL_MODS[3], pts:wPts,       sub:wDone?"Claude 채점":"미채점"},
     {m:FULL_MODS[4], pts:sPts,       sub:sDone?"Claude 채점":"미채점"}
   ];
@@ -31815,21 +32619,7 @@ function fullResult(v){
       <details class="model"><summary>모범 답안 보기</summary>
         <p class="m-pl">${esc(n===0?fx.sset.model.pic:n===1?fx.sset.model.mono:fx.sset.model.role).replace(/\n/g,"<br>")}</p></details>`).join("")}
   </div>
-  <h2 class="sec">듣기 대본</h2>
-  <div class="card pad">${[...new Set(fx.items.listen.map(i=>i.audio))].map(a=>`
-    <div class="ex"><div class="s pl" style="font-size:15px;line-height:1.8">${esc(a.script)}
-      <button class="spk" data-say="${esc(a.script)}">🔊</button></div>
-      <div class="t">${esc(a.ko)}</div></div>`).join("")}</div>
-  ${(()=>{const wrong=[];
-    ["listen","gram","read"].forEach(id=>fx.items[id].forEach((it,i)=>{
-      if(fx.ans[id][i]!==it.ans)wrong.push({it,given:fx.ans[id][i]});}));
-    return wrong.length?`<h2 class="sec">오답 ${wrong.length}문항</h2><div class="card pad">
-      ${wrong.map(x=>`<div class="ex" style="--cc:var(--bad)">
-        <div style="font-size:14px">${esc(x.it.stem)}</div>
-        <div class="inline" style="margin-top:6px;gap:14px">
-          <span class="yr">${esc(x.given===undefined?"(무응답)":x.given)}</span>
-          <span class="cr pl" style="font-size:15px">${esc(x.it.ans)}</span></div>
-        <div class="t" style="margin-top:4px">${esc(x.it.why)}</div></div>`).join("")}</div>`:"";})()}
+  ${["listen","read","gram"].map(id=>`<h2 class="sec">${FULL_MODS.find(m=>m.id===id).t} — 과제별 채점과 정답</h2>${rxReviewHtml(fx.set,id,fx.rx[id].ans)}`).join("")}
   <div class="inline" style="margin-top:20px">
     <button class="btn red" id="fxAgain">다시 응시</button>
     <button class="btn ghost" id="fxHome">모의고사 첫 화면</button>
