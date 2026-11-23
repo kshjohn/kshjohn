@@ -26646,10 +26646,378 @@ function bindHome(){
 let vState={deck:null,mode:"card",i:0,flipped:false,list:[],query:""};
 
 function viewVocab(v){
+  if(fw){ viewFw(v); return; }
   if(wt){ viewWordTest(v); return; }
   if(!vState.deck){ v.innerHTML=vocabDeckList(); bindDeckList(v); return; }
   vocabStudy(v);
 }
+/* =======================================================================
+   기능어 용법 연습 — 부사·빈도 / 대명사·의문사 / 전치사·접속사 / 수량·단위
+   이런 낱말은 뜻보다 '어떤 격과 함께, 어디에 쓰는가'가 핵심이라 문장 빈칸으로 연습한다.
+   손 문항 한 줄 = "빈칸 ___ 문장::정답::오답|오답|오답::한국어::근거"
+   전치사+격, 수량어+속격은 명사 격변화표(DECL)에서 문항을 계속 새로 만든다.
+   ======================================================================= */
+const _FW=s=>{const a=s.split("::"); return {s:a[0],a:a[1],o:a[2].split("|"),ko:a[3],why:a[4]||""};};
+const FW={
+ prep:{t:"전치사·접속사", deck:"prep1", rule:`
+  <table class="tb"><thead><tr><th>격</th><th>전치사</th><th>예</th></tr></thead><tbody>
+  <tr><td class="k" style="color:var(--c2)">속격</td><td class="pl">do · od · z(~에서) · bez · dla · u · obok · koło · podczas · według · oprócz</td><td class="pl">do domu, bez cukru, u lekarza</td></tr>
+  <tr><td class="k" style="color:var(--c3)">여격</td><td class="pl">dzięki · przeciwko · ku</td><td class="pl">dzięki tobie</td></tr>
+  <tr><td class="k" style="color:var(--c4)">대격</td><td class="pl">przez · na/w(방향) · za(~ 뒤에 시간) · po(가지러)</td><td class="pl">przez park, na pocztę, za godzinę</td></tr>
+  <tr><td class="k" style="color:var(--c5)">조격</td><td class="pl">z(~와) · nad · pod · przed · za · między (위치)</td><td class="pl">z mlekiem, pod stołem</td></tr>
+  <tr><td class="k" style="color:var(--c6)">전치격</td><td class="pl">w · na(위치) · o · po(~ 후에) · przy</td><td class="pl">w Krakowie, o pracy, po obiedzie</td></tr>
+  </tbody></table>
+  <p class="lede" style="margin:10px 0 0">장소: <b>w</b> 도시·건물 안 / <b>na</b> 우체국·역·대학·행사 / <b>u</b> 사람한테. 갈 때 <b>do · na(+대격) · do(사람)</b>, 올 때 <b>z · z · od(사람)</b>.
+  접속사: 이유 <b>bo/ponieważ</b> · 결과 <b>więc</b> · 대조 <b>ale / a</b> · 내용 <b>że</b> · 목적·바람 <b>żeby</b> · 예/아니요 간접질문 <b>czy</b> · 조건 <b>jeśli</b> · 양보 <b>chociaż</b> · 때 <b>kiedy/gdy</b>.</p>`,
+  modes:[["choose","알맞은 전치사"],["case","전치사 + 격"],["conj","접속사"]]},
+ pron:{t:"대명사·의문사", deck:"pron1", rule:`
+  <table class="tb"><thead><tr><th>격</th><th>ja</th><th>ty</th><th>on / ono</th><th>ona</th><th>my</th><th>wy</th><th>oni / one</th></tr></thead><tbody>
+  <tr><td class="k">속격</td><td class="pl">mnie</td><td class="pl">ciebie, cię</td><td class="pl">jego, go, niego</td><td class="pl">jej, niej</td><td class="pl">nas</td><td class="pl">was</td><td class="pl">ich, nich</td></tr>
+  <tr><td class="k">여격</td><td class="pl">mnie, mi</td><td class="pl">tobie, ci</td><td class="pl">jemu, mu, niemu</td><td class="pl">jej, niej</td><td class="pl">nam</td><td class="pl">wam</td><td class="pl">im, nim</td></tr>
+  <tr><td class="k">대격</td><td class="pl">mnie</td><td class="pl">ciebie, cię</td><td class="pl">jego, go, niego</td><td class="pl">ją, nią</td><td class="pl">nas</td><td class="pl">was</td><td class="pl">ich/je, nich/nie</td></tr>
+  <tr><td class="k">조격</td><td class="pl">mną</td><td class="pl">tobą</td><td class="pl">nim</td><td class="pl">nią</td><td class="pl">nami</td><td class="pl">wami</td><td class="pl">nimi</td></tr>
+  <tr><td class="k">전치격</td><td class="pl">mnie</td><td class="pl">tobie</td><td class="pl">nim</td><td class="pl">niej</td><td class="pl">nas</td><td class="pl">was</td><td class="pl">nich</td></tr>
+  </tbody></table>
+  <p class="lede" style="margin:10px 0 0"><b>짧은 꼴</b>(mi, cię, go, mu)은 평소에, <b>긴 꼴</b>(mnie, ciebie, jego)은 강조·문장 첫머리·전치사 뒤에. 전치사 뒤 3인칭은 <b>n-</b>: dla niego, z nią, o nich.
+  주어 자신의 것은 jego/jej 대신 <b>swój</b>. 의문사도 격변화: <b>kto → kogo · komu · z kim · o kim</b>, <b>co → czego · czemu · czym · o czym</b>. 위치 <b>gdzie</b> · 방향 <b>dokąd</b> · 출발 <b>skąd</b> · 남성인간 수 <b>ilu</b>.</p>`,
+  modes:[["pers","인칭대명사 격"],["poss","소유·지시 일치"],["qw","의문사"]]},
+ adv:{t:"부사·빈도", deck:"adv", rule:`
+  <table class="tb"><thead><tr><th>규칙</th><th>예</th></tr></thead><tbody>
+  <tr><td class="k" style="font-family:var(--font-ui);font-size:13px">형용사 → 부사</td><td class="pl">dobry → dobrze · zły → źle · szybki → szybko · piękny → pięknie · cichy → cicho</td></tr>
+  <tr><td class="k" style="font-family:var(--font-ui);font-size:13px">날씨·느낌은 부사</td><td class="pl">Jest zimno. Jest mi ciepło. Czuję się dobrze.</td></tr>
+  <tr><td class="k" style="font-family:var(--font-ui);font-size:13px">빈도</td><td class="pl">zawsze · zwykle · często · czasami · rzadko · nigdy <b>nie</b></td></tr>
+  <tr><td class="k" style="font-family:var(--font-ui);font-size:13px">횟수</td><td class="pl">raz · dwa/trzy/cztery <b>razy</b> · pięć razy + w tygodniu / w miesiącu / dziennie / co tydzień</td></tr>
+  <tr><td class="k" style="font-family:var(--font-ui);font-size:13px">때</td><td class="pl">już 벌써 · jeszcze 아직 · dopiero 겨우·~에야 · znowu 또</td></tr>
+  <tr><td class="k" style="font-family:var(--font-ui);font-size:13px">비교</td><td class="pl">szybko → szybciej → najszybciej · dobrze → lepiej · dużo → więcej · mało → mniej</td></tr>
+  </tbody></table>`,
+  modes:[["adjadv","형용사냐 부사냐"],["freq","빈도·때 표현"],["advcomp","부사 비교"]]},
+ quant:{t:"수량·단위", deck:"quant", rule:`
+  <table class="tb"><thead><tr><th>규칙</th><th>예</th></tr></thead><tbody>
+  <tr><td class="k" style="font-family:var(--font-ui);font-size:13px">수량어 + 속격</td><td class="pl">dużo · mało · trochę · wiele · kilka · parę · mnóstwo · ile + <b>속격</b>: dużo pracy, kilka jabłek</td></tr>
+  <tr><td class="k" style="font-family:var(--font-ui);font-size:13px">셀 수 없는 것</td><td class="pl">속격 <b>단수</b>: trochę cukru, mało mleka</td></tr>
+  <tr><td class="k" style="font-family:var(--font-ui);font-size:13px">셀 수 있는 것</td><td class="pl">속격 <b>복수</b>: dużo ludzi, kilka książek</td></tr>
+  <tr><td class="k" style="font-family:var(--font-ui);font-size:13px">용기·단위 + 속격</td><td class="pl">butelka wody · kilogram jabłek · kawałek ciasta · pół litra mleka · para butów</td></tr>
+  <tr><td class="k" style="font-family:var(--font-ui);font-size:13px">남성인간</td><td class="pl">ilu · kilku · wielu · pięciu + 속격 복수: kilku Polaków</td></tr>
+  <tr><td class="k" style="font-family:var(--font-ui);font-size:13px">어림</td><td class="pl">około + 속격 (około godziny) · ponad + 대격 (ponad godzinę) · co najmniej</td></tr>
+  </tbody></table>`,
+  modes:[["qgen","수량어 + 속격"],["units","용기·단위 + 속격"],["qmisc","ile·około·ponad"]]}
+};
+const FW_ITEMS={
+ choose:[
+  "Jutro jadę ___ Krakowa.::do::w|na|od::내일 크라쿠프에 간다.::도시로 가다 → do + 속격",
+  "Mieszkam ___ Warszawie.::w::do|na|z::바르샤바에 산다.::도시 안 위치 → w + 전치격",
+  "Idę ___ pocztę.::na::do|w|po::우체국에 간다.::poczta·dworzec·uczelnia·koncert 는 na + 대격",
+  "Czekam ___ poczcie.::na::w|do|z::우체국에서 기다린다.::na 를 쓰는 장소는 위치도 na + 전치격",
+  "Wracam ___ pracy o piątej.::z::od|do|na::다섯 시에 직장에서 돌아온다.::do 로 가는 곳에서 나올 땐 z + 속격",
+  "Muszę iść ___ lekarza.::do::u|na|od::병원(의사한테) 가야 한다.::사람한테 가다 → do + 속격",
+  "Byłem wczoraj ___ lekarza.::u::do|od|z::어제 병원(의사한테) 갔었다.::사람한테 있다 → u + 속격",
+  "Wracam ___ dentysty.::od::z|u|do::치과에서 돌아오는 길이다.::사람한테서 → od + 속격",
+  "Kawa ___ mlekiem, proszę.::z::bez|od|na::우유 넣은 커피 주세요.::~ 넣은, ~와 함께 → z + 조격",
+  "Poproszę herbatę ___ cukru.::bez::z|od|do::설탕 없는 차 주세요.::bez + 속격",
+  "Ten prezent jest ___ ciebie.::dla::do|u|od::이 선물은 너 주려는 거야.::~를 위해 → dla + 속격",
+  "Spotkamy się ___ godzinę.::za::po|przez|na::한 시간 뒤에 만나자.::지금부터 ~ 뒤 → za + 대격",
+  "___ obiedzie idę na spacer.::Po::Za|Przed|Przez::점심 먹고 나서 산책한다.::~ 후에 → po + 전치격 (przed 는 obiadem)",
+  "Pracowałem tam ___ trzy lata.::przez::za|na|po::거기서 3년 동안 일했다.::기간 동안 → przez + 대격",
+  "Jadę do Paryża ___ tydzień.::na::przez|od|o::일주일 일정으로 파리에 간다.::예정된 기간 → na + 대격",
+  "Kot śpi ___ stołem.::pod::na|w|do::고양이가 탁자 밑에서 잔다.::pod + 조격 (위치)",
+  "Rozmawiamy ___ pogodzie.::o::na|po|do::날씨 이야기를 한다.::~에 대해 → o + 전치격",
+  "Mówisz ___ polsku?::po::w|na|o::폴란드어 할 줄 알아?::'~어로'는 po polsku 통째로",
+  "Idę ___ chleb do sklepu.::po::na|dla|za::빵 사러 가게에 간다.::~ 가지러·사러 → po + 대격",
+  "Mieszkam ___ parku.::obok::przez|do|na::공원 옆에 산다.::obok + 속격"
+ ].map(_FW),
+ conj:[
+  "Nie przyszedłem, ___ byłem chory.::bo::ale|więc|żeby::아파서 못 왔어.::이유 → bo (= ponieważ)",
+  "Byłem zmęczony, ___ poszedłem spać.::więc::bo|ale|chociaż::피곤해서 자러 갔다.::결과 → więc",
+  "Lubię kawę, ___ wolę herbatę.::ale::bo|więc|żeby::커피도 좋지만 차가 더 좋다.::대조 → ale",
+  "Myślę, ___ masz rację.::że::żeby|bo|czy::네 말이 맞다고 생각해.::생각·말의 내용 → że",
+  "Chcę, ___ przyszedł jutro.::żebyś::że|bo|jeśli::네가 내일 왔으면 좋겠어.::바람·요청 → żeby (+ 과거형 꼴), 주어가 너 → żebyś",
+  "Uczę się polskiego, ___ pracować w Polsce.::żeby::że|bo|więc::폴란드에서 일하려고 폴란드어를 배운다.::목적 → żeby + 부정사",
+  "Nie wiem, ___ on przyjdzie.::czy::że|żeby|bo::그가 올지 모르겠다.::예/아니요를 묻는 간접 질문 → czy",
+  "___ będzie ładna pogoda, pojedziemy nad morze.::Jeśli::Bo|Że|Ale::날씨가 좋으면 바닷가에 갈 거야.::조건 → jeśli (= jeżeli)",
+  "___ padało, poszliśmy na spacer.::Chociaż::Bo|Więc|Jeśli::비가 왔지만 산책하러 갔다.::양보 → chociaż (= mimo że)",
+  "___ byłem dzieckiem, mieszkałem na wsi.::Kiedy::Czy|Że|Bo::어릴 때 시골에 살았다.::때 → kiedy (= gdy)",
+  "Chcesz kawę ___ herbatę?::czy::i|ale|a::커피 마실래, 차 마실래?::둘 중 고르는 질문 → czy (= albo)",
+  "Ja jestem z Korei, ___ on jest z Polski.::a::bo|więc|żeby::나는 한국에서 왔고, 그는 폴란드에서 왔다.::두 가지를 나란히 견줄 때 → a",
+  "To jest kobieta, ___ mieszka obok.::która::który|które|którą::옆집에 사는 여자다.::여성 명사 + 관계절 주어 → która",
+  "Poczekaj, ___ skończę.::aż::bo|że|czy::내가 끝낼 때까지 기다려.::~할 때까지 → aż",
+  "Nie idę na imprezę, ___ muszę się uczyć.::ponieważ::więc|chociaż|żeby::공부해야 해서 파티에 안 간다.::이유(격식) → ponieważ",
+  "Zadzwoń, ___ tylko wylądujesz.::jak::że|czy|bo::착륙하자마자 전화해.::jak tylko = ~하자마자"
+ ].map(_FW),
+ pers:[
+  "Kocham ___. (ty)::cię::ci|tobą|ty::사랑해.::kochać + 대격, 강조가 없으면 짧은 꼴",
+  "Daj ___ to, proszę. (ja)::mi::mną|ja|mój::그거 나한테 줘.::dać + 여격, 짧은 꼴 mi",
+  "Pójdziesz ze ___ do kina? (ja)::mną::mnie|mi|ja::나랑 영화 보러 갈래?::z + 조격 → (ze) mną",
+  "Znasz ___? To mój brat. (on)::go::mu|nim|on::그 사람 알아? 우리 형이야.::znać + 대격, 짧은 꼴 go",
+  "Rozmawiałem z ___ wczoraj. (on)::nim::go|mu|niego::어제 그와 이야기했다.::z + 조격, 전치사 뒤 n- → nim",
+  "To prezent dla ___. (on)::niego::go|mu|jemu::그 사람 줄 선물이야.::dla + 속격, 전치사 뒤 → niego",
+  "Pomagam ___ w lekcjach. (ona)::jej::ją|nią|niej::그녀의 숙제를 도와준다.::pomagać + 여격 → jej",
+  "Widziałeś ___? (ona)::ją::jej|nią|niej::그녀 봤어?::대격 → ją",
+  "Często myślę o ___. (ona)::niej::jej|nią|ją::그녀 생각을 자주 한다.::o + 전치격, 전치사 뒤 → niej",
+  "Czekamy na ___. (wy)::was::wam|wami|wy::너희를 기다리고 있어.::na + 대격 → was",
+  "Dziękuję ___ za pomoc. (wy)::wam::was|wami|wy::도와줘서 너희에게 고마워.::dziękować + 여격 → wam",
+  "Nie znam ___. (oni)::ich::im|nimi|nich::그 사람들을 모른다.::부정 → 속격 ich",
+  "Idę z ___ na obiad. (oni)::nimi::nich|im|ich::그들과 점심 먹으러 간다.::z + 조격, 전치사 뒤 → nimi",
+  "___ się to nie podoba. (ja, 강조)::Mnie::Mi|Mną|Ja::나는 그게 마음에 안 들어.::문장 첫머리·강조 → 긴 꼴 mnie",
+  "Pisałem do ___ wczoraj. (ty)::ciebie::cię|ci|tobą::어제 너한테 메시지를 썼어.::전치사 뒤 → 긴 꼴 ciebie",
+  "Spotkajmy się u ___. (my)::nas::nam|nami|my::우리 집에서 만나자.::u + 속격 → nas",
+  "Podoba ___ się ta książka? (ty)::ci::cię|tobą|ty::이 책 마음에 들어?::podobać się + 여격, 짧은 꼴 ci",
+  "Co ___ dolega? (pan)::panu::pana|panem|pan::어디가 불편하세요? (의사가 남자 환자에게)::dolegać + 여격 → panu"
+ ].map(_FW),
+ poss:[
+  "To jest ___ siostra. (mój)::moja::mój|moje|moją::이 사람은 내 여동생이다.::여성 주격 → moja",
+  "Gdzie są ___ klucze? (mój)::moje::moi|mój|mojego::내 열쇠 어디 있지?::사물 복수 → moje",
+  "To są ___ koledzy. (mój)::moi::moje|mój|moich::이 사람들은 내 동료다.::남성인간 복수 → moi",
+  "Nie widzę ___ telefonu. (twój)::twojego::twój|twoim|twojemu::네 전화기가 안 보여.::부정 → 속격",
+  "Mieszkam z ___ żoną. (mój)::moją::moja|mojej|moje::아내와 함께 산다.::z + 조격 여성 → moją",
+  "Anna kocha ___ męża. (자기)::swojego::jej|jego|swój::안나는 자기 남편을 사랑한다.::주어 자신의 것 → swój (jej 면 다른 여자의 남편)",
+  "Marek przyjechał ___ samochodem. (자기)::swoim::jego|swój|swojego::마렉은 자기 차로 왔다.::수단 조격 + 주어 소유 → swoim",
+  "Lubię ___ książkę. (ten)::tę::ta|tą|tej::이 책을 좋아한다.::여성 대격 → tę",
+  "Kto mieszka w ___ domu? (ten)::tym::ten|tego|temu::이 집에는 누가 살아?::w + 전치격 → tym",
+  "___ ludzie są bardzo mili. (ten)::Ci::Te|Ten|Tych::이 사람들은 아주 친절하다.::남성인간 복수 → ci",
+  "Znasz ___ panią? (tamten)::tamtą::tamta|tamtej|tamten::저 여자분 알아?::여성 대격 → tamtą",
+  "To jest dom ___ rodziców. (nasz)::naszych::nasi|nasze|naszym::우리 부모님 집이다.::속격 복수 → naszych",
+  "Byłem u ___ dziadków. (wasz)::waszych::wasi|wasze|waszym::너희 조부모님 댁에 있었다.::u + 속격 복수",
+  "Czy to ___ długopis? (twój)::twój::twoja|twoje|twojego::이거 네 볼펜이야?::남성 주격 → twój",
+  "Daj to ___ bratu. (mój)::mojemu::mojego|moim|mój::그거 내 동생한테 줘.::여격 남성 → mojemu"
+ ].map(_FW),
+ qw:[
+  "___ to jest? — To mój brat.::Kto::Co|Kogo|Czyj::이 사람 누구야? — 우리 형이야.::사람 주어 → kto",
+  "___ szukasz? — Kluczy.::Czego::Co|Kogo|Czym::뭘 찾아? — 열쇠.::szukać + 속격 → czego",
+  "___ dałeś prezent? — Mamie.::Komu::Kogo|Kto|Kim::누구한테 선물 줬어? — 엄마한테.::dać + 여격 → komu",
+  "Z ___ rozmawiałeś? — Z Anną.::kim::kogo|kto|komu::누구랑 이야기했어? — 안나랑.::z + 조격 → kim",
+  "O ___ myślisz? — O pracy.::czym::co|czego|kim::무슨 생각 해? — 일 생각.::o + 전치격(사물) → czym",
+  "___ jedziesz na wakacje? — Do Hiszpanii.::Dokąd::Skąd|Kiedy|Jak::휴가 어디로 가? — 스페인으로.::방향 → dokąd",
+  "___ wracasz? — Z pracy.::Skąd::Gdzie|Dokąd|Kiedy::어디서 오는 길이야? — 직장에서.::출발점 → skąd",
+  "___ mieszkasz? — W Krakowie.::Gdzie::Dokąd|Skąd|Kiedy::어디 살아? — 크라쿠프.::위치 → gdzie",
+  "___ kosztuje ten chleb? — Pięć złotych.::Ile::Jak|Ilu|Co::이 빵 얼마예요? — 5즈워티.::값·양 → ile",
+  "___ studentów jest w grupie? — Dwunastu.::Ilu::Ile|Jak|Kto::반에 학생이 몇 명이야? — 열두 명.::남성인간 수 → ilu",
+  "___ się nie uczysz? — Bo jestem zmęczony.::Dlaczego::Jak|Kiedy|Gdzie::왜 공부 안 해? — 피곤해서.::이유 → dlaczego",
+  "___ to jest samochód? — Mojego ojca.::Czyj::Jaki|Który|Kto::이거 누구 차야? — 우리 아버지 거.::소유자 → czyj",
+  "___ jest twój nowy szef? — Bardzo miły.::Jaki::Który|Czyj|Jak::새 상사는 어떤 사람이야? — 아주 친절해.::성질·특징 → jaki",
+  "O ___ godzinie zaczyna się film? — O ósmej.::której::kiedy|ile|jak::영화 몇 시에 시작해? — 여덟 시.::몇 시 → o której godzinie",
+  "___ się czujesz? — Dobrze, dziękuję.::Jak::Co|Jaki|Kiedy::몸은 좀 어때? — 괜찮아, 고마워.::상태 → jak",
+  "___ widziałeś wczoraj w parku? — Anię.::Kogo::Kto|Komu|Kim::어제 공원에서 누구 봤어? — 아냐.::widzieć + 대격(사람) → kogo",
+  "___ piszesz? — Długopisem.::Czym::Co|Czego|Kim::뭘로 써? — 볼펜으로.::도구 조격 → czym"
+ ].map(_FW),
+ adjadv:[
+  "Mówisz bardzo ___ po polsku.::dobrze::dobry|dobra|dobre::폴란드어를 아주 잘하네.::동사를 꾸밈 → 부사",
+  "To jest ___ kawa.::dobra::dobrze|dobry|dobre::이거 좋은 커피다.::명사(여성)를 꾸밈 → 형용사",
+  "On jeździ za ___.::szybko::szybki|szybka|szybkie::그는 너무 빨리 운전한다.::동사를 꾸밈 → 부사",
+  "Ten pociąg jest bardzo ___.::szybki::szybko|szybka|szybkie::이 기차는 아주 빠르다.::być + 형용사 (남성 주어)",
+  "Dzisiaj jest ___.::zimno::zimny|zimna|zimne::오늘 춥다.::날씨·느낌 → 부사 꼴 (jest zimno)",
+  "Mam ___ ręce.::zimne::zimno|zimny|zimna::손이 차갑다.::복수 명사를 꾸밈 → 형용사",
+  "Czuję się dziś ___.::źle::zły|zła|złe::오늘 몸이 안 좋다.::czuć się + 부사",
+  "To był ___ dzień.::zły::źle|zła|złe::안 좋은 날이었다.::명사(남성)를 꾸밈 → 형용사",
+  "Ona ___ śpiewa.::pięknie::piękny|piękna|piękne::그녀는 노래를 아름답게 부른다.::동사를 꾸밈 → 부사",
+  "Tutaj jest bardzo ___.::cicho::cichy|cicha|cisza::여기 아주 조용하다.::jest + 부사 (장소의 상태)",
+  "Było ___ i wesoło.::miło::miły|miła|miłe::즐겁고 유쾌했다.::상황 → 부사 꼴",
+  "Uczę się ___ — codziennie godzinę.::regularnie::regularny|regularna|regularne::매일 한 시간씩 꾸준히 공부한다.::동사를 꾸밈 → 부사"
+ ].map(_FW),
+ freq:[
+  "Chodzę na basen dwa ___ w tygodniu.::razy::raz|razem|razu::일주일에 두 번 수영장에 간다.::2·3·4 + razy",
+  "___ nie jem mięsa.::Nigdy::Zawsze|Wcale|Nigdzie::고기는 절대 안 먹는다.::nigdy 는 동사 앞 nie 와 함께",
+  "Piję kawę ___ — każdego dnia.::codziennie::rzadko|nigdy|czasem::매일 커피를 마신다.::매일 → codziennie",
+  "Spotykamy się co ___.::tydzień::tygodnia|tygodniu|tygodnie::우리는 매주 만난다.::co + 대격 = 매-",
+  "Biorę ten lek trzy razy ___.::dziennie::dnia|dzienny|dniem::이 약을 하루 세 번 먹는다.::하루에 → dziennie",
+  "Byłem w Polsce tylko ___.::raz::razy|razem|razu::폴란드에 딱 한 번 가 봤다.::한 번 → raz",
+  "Bardzo ___ chodzę do kina — może dwa razy w roku.::rzadko::często|zawsze|codziennie::영화관엔 아주 가끔 간다 — 일 년에 두 번쯤.::드물게 → rzadko",
+  "Płacę czynsz raz ___ miesiącu.::w::po|o|przy::월세는 한 달에 한 번 낸다.::raz w tygodniu / w miesiącu / w roku",
+  "Jest dopiero siódma, ___ nie wstawaj.::jeszcze::już|znowu|nigdy::아직 일곱 시야, 아직 일어나지 마.::아직 → jeszcze",
+  "Czy ___ skończyłeś? — Tak, właśnie skończyłem.::już::jeszcze|dopiero|znowu::벌써 끝냈어? — 응, 방금 끝냈어.::벌써 → już",
+  "Przyjechał ___ wczoraj, a nie tydzień temu.::dopiero::już|jeszcze|znowu::일주일 전이 아니라 어제야 왔다.::겨우·~에야 → dopiero",
+  "Spóźniłeś się ___! To już trzeci raz.::znowu::jeszcze|dopiero|nigdy::또 늦었네! 벌써 세 번째야.::또 → znowu",
+  "Nie byłem ___ w Japonii.::nigdy::zawsze|często|już::일본에는 한 번도 안 가 봤다.::nie … nigdy = 한 번도 ~ 않다",
+  "___ wstaję o szóstej, ale w weekend śpię dłużej.::Zwykle::Nigdy|Wcale|Nigdzie::보통은 6시에 일어나지만 주말엔 더 잔다.::보통 → zwykle"
+ ].map(_FW),
+ advcomp:[
+  "Mów ___, proszę.::wolniej::wolno|najwolniej|wolny::좀 더 천천히 말해 줘.::더 천천히 → 비교급 wolniej",
+  "Pracuję ___ niż w zeszłym roku.::więcej::dużo|najwięcej|bardziej::작년보다 일을 더 많이 한다.::dużo → więcej",
+  "Dziś czuję się ___ niż wczoraj.::lepiej::dobrze|najlepiej|lepszy::오늘은 어제보다 몸이 낫다.::dobrze → lepiej",
+  "On biega ___ ze wszystkich.::najszybciej::szybciej|szybko|najszybszy::그가 모두 중에서 제일 빨리 달린다.::최상급 부사",
+  "Dziś jest ___ niż wczoraj.::zimniej::zimno|zimny|najzimniej::오늘이 어제보다 더 춥다.::niż → 비교급",
+  "Mam ___ czasu niż ty.::mniej::mało|mniejszy|najmniej::나는 너보다 시간이 적다.::mało → mniej (+ 속격)",
+  "Ona mówi po polsku ___ niż ja.::lepiej::lepsza|dobrze|najlepiej::그녀는 나보다 폴란드어를 잘한다.::동사를 꾸밈 → 부사 비교급",
+  "Przyjdź ___, proszę — o siódmej, nie o ósmej.::wcześniej::wcześnie|najwcześniej|późno::좀 더 일찍 와 줘 — 8시 말고 7시에.::더 일찍 → wcześniej",
+  "Ten film jest ___ interesujący niż książka.::bardziej::więcej|lepiej|najbardziej::이 영화가 책보다 더 재미있다.::긴 형용사 → bardziej + 형용사",
+  "Coraz ___ rozumiem po polsku.::lepiej::dobrze|lepszy|najlepiej::폴란드어를 점점 더 잘 알아듣는다.::coraz + 비교급"
+ ].map(_FW),
+ qgen:[
+  "Mam dziś dużo ___. (praca)::pracy::praca|pracę|prace::오늘 일이 많다.::dużo + 속격 (셀 수 없음 → 단수)",
+  "W lodówce jest mało ___. (mleko)::mleka::mleko|mleku|mlekiem::냉장고에 우유가 별로 없다.::mało + 속격",
+  "Kupiłem kilka ___. (jabłko)::jabłek::jabłka|jabłko|jabłkami::사과를 몇 개 샀다.::kilka + 속격 복수",
+  "Poproszę trochę ___. (cukier)::cukru::cukier|cukrem|cukry::설탕 조금 주세요.::trochę + 속격 (cukier → cukru)",
+  "Ile masz ___? (brat)::braci::bracia|brata|bratów::형제가 몇 명이야?::ile + 속격 복수 (brat → braci)",
+  "Na sali było wiele ___. (osoba)::osób::osoby|osobę|osobach::홀에 사람이 많았다.::wiele + 속격 복수",
+  "Mamy jeszcze mnóstwo ___. (czas)::czasu::czas|czasy|czasem::아직 시간이 엄청 많다.::mnóstwo + 속격",
+  "Zostało mi mało ___. (pieniądze)::pieniędzy::pieniądze|pieniądzach|pieniądzom::돈이 얼마 안 남았다.::mało + 속격 복수",
+  "Kupię parę ___. (bułka)::bułek::bułki|bułka|bułkami::빵 몇 개 살게.::parę + 속격 복수",
+  "Za dużo ___ jest niezdrowe. (sól)::soli::sól|solą|sole::소금을 너무 많이 먹으면 건강에 나쁘다.::za dużo + 속격"
+ ].map(_FW),
+ units:[
+  "Poproszę butelkę ___. (woda)::wody::woda|wodę|wodą::물 한 병 주세요.::용기 + 속격",
+  "Kupiłem kilogram ___. (ziemniaki)::ziemniaków::ziemniaki|ziemniak|ziemniakami::감자 1킬로를 샀다.::단위 + 속격 복수",
+  "Daj mi kawałek ___. (ciasto)::ciasta::ciasto|ciastem|cieście::케이크 한 조각 줘.::kawałek + 속격",
+  "Wypiłem szklankę ___. (sok)::soku::sok|sokiem|soki::주스 한 잔 마셨다.::szklanka + 속격",
+  "Potrzebuję pół litra ___. (mleko)::mleka::mleko|mlekiem|mleku::우유 반 리터가 필요하다.::pół litra + 속격",
+  "Kupiłam parę ___. (buty)::butów::buty|butami|buta::신발 한 켤레 샀다.::para + 속격 복수",
+  "Zjadłem talerz ___. (zupa)::zupy::zupa|zupę|zupą::수프 한 접시 먹었다.::talerz + 속격",
+  "Poproszę dwie kromki ___. (chleb)::chleba::chleb|chlebem|chleby::빵 두 조각 주세요.::kromka + 속격",
+  "W szafie jest pudełko ___. (zdjęcia)::zdjęć::zdjęcia|zdjęciami|zdjęciu::옷장에 사진 상자가 있다.::pudełko + 속격 복수",
+  "Kup puszkę ___. (pomidory)::pomidorów::pomidory|pomidorami|pomidora::토마토 통조림 하나 사.::puszka + 속격 복수",
+  "Poproszę dziesięć deko ___. (szynka)::szynki::szynka|szynkę|szynką::햄 100그램 주세요.::deko + 속격",
+  "Dodaj łyżkę ___. (oliwa)::oliwy::oliwa|oliwę|oliwą::올리브유 한 숟갈 넣어.::łyżka + 속격"
+ ].map(_FW),
+ qmisc:[
+  "___ kosztuje kilogram jabłek?::Ile::Ilu|Jak|Co::사과 1킬로에 얼마예요?::값 → ile",
+  "___ studentów przyszło na zajęcia?::Ilu::Ile|Jak|Kto::수업에 학생이 몇 명 왔어?::남성인간 → ilu",
+  "Na koncercie było około ___ osób. (tysiąc)::tysiąca::tysiąc|tysiące|tysiącem::콘서트에 약 천 명이 왔다.::około + 속격",
+  "Czekałem ponad ___. (godzina)::godzinę::godziny|godziną|godzina::한 시간 넘게 기다렸다.::ponad + 대격",
+  "W grupie jest kilku ___. (Polak)::Polaków::Polacy|Polaka|Polakami::반에 폴란드 사람이 몇 명 있다.::남성인간 → kilku + 속격 복수",
+  "Mam kilka ___. (koleżanka)::koleżanek::koleżanki|koleżanką|koleżankom::여자 친구(동료)가 몇 명 있다.::kilka + 속격 복수",
+  "Ta trasa ma pięć ___. (kilometr)::kilometrów::kilometry|kilometra|kilometrami::이 코스는 5킬로미터다.::5 이상 + 속격 복수",
+  "Ta butelka ma dwa ___. (litr)::litry::litrów|litr|litra::이 병은 2리터다.::2·3·4 + 주격 복수",
+  "Ważę sześćdziesiąt ___. (kilogram)::kilogramów::kilogramy|kilogram|kilograma::내 몸무게는 60킬로그램이다.::5 이상 + 속격 복수",
+  "Poproszę połowę ___. (pizza)::pizzy::pizza|pizzę|pizzą::피자 반 판 주세요.::połowa + 속격",
+  "Zostało mi tylko parę ___. (złoty)::złotych::złote|złoty|złotymi::몇 즈워티밖에 안 남았다.::złoty 는 형용사처럼 변함 → złotych",
+  "Ile ___ masz? (lata)::lat::lata|roku|latach::몇 살이야?::'나이' → ile masz lat"
+ ].map(_FW)
+};
+/* ---- 생성 문항 ---- */
+const fwJong=w=>{const c=String(w).trim().slice(-1).charCodeAt(0)-0xAC00; return c>=0&&c<11172?c%28:-1;};
+const fwRo=w=>{const j=fwJong(w); return w+(j>0&&j!==8?"으로":"로");};          /* ㄹ 받침은 '로' */
+const fwWa=w=>w+(fwJong(w)>0?"과":"와");
+/* 문장 틀마다 어울리는 명사만 쓴다 — "달걀로 간다" 같은 문장이 나오지 않게 */
+/* w + 장소 틀에도 쓰므로 na 를 쓰는 곳(poczta·dworzec·uniwersytet)은 넣지 않는다 */
+const FW_PLACES="dom sklep park bank hotel szkoła kawiarnia restauracja kino teatr biuro apteka miasto kościół szpital biblioteka kuchnia".split(" ");
+const FW_PEOPLE="brat siostra mama matka ojciec kolega koleżanka sąsiad lekarz nauczyciel przyjaciel dziecko pies kot babcia dziadek szef student córka syn".split(" ");
+const FW_PREP_FR=[
+  {p:"do",  c:2, n:FW_PLACES, pl:"Idę do ___.",           ko:N=>`${fwRo(N)} 간다.`},
+  {p:"bez", c:2, n:"mleko cukier telefon praca kawa samochód woda muzyka przyjaciel parasol".split(" "), pl:"Nie mogę żyć bez ___.", ko:N=>`${N} 없이는 못 산다.`},
+  {p:"obok",c:2, n:FW_PLACES, pl:"Mieszkam obok ___.",    ko:N=>`${N} 옆에 산다.`},
+  {p:"koło",c:2, n:FW_PLACES, pl:"Czekam koło ___.",      ko:N=>`${N} 근처에서 기다린다.`},
+  {p:"dla", c:2, n:FW_PEOPLE, pl:"Kupiłem to dla ___.",   ko:N=>`이건 ${N} 주려고 샀다.`},
+  {p:"dzięki",c:3,n:"pomoc mama brat przyjaciel nauczyciel lekarz kolega siostra praca".split(" "), pl:"Wszystko udało się dzięki ___.", ko:N=>`${N} 덕분에 다 잘됐다.`},
+  {p:"przez",c:4,n:"park ulica las most miasto okno rzeka plac".split(" "), pl:"Idę przez ___.", ko:N=>`${N}${fwJong(N)>0?"을":"를"} 지나간다.`},
+  {p:"z",   c:5, n:FW_PEOPLE, pl:"Rozmawiam z ___.",      ko:N=>`${fwWa(N)} 이야기한다.`},
+  {p:"przed",c:5,n:FW_PLACES, pl:"Spotkajmy się przed ___.", ko:N=>`${N} 앞에서 만나자.`},
+  {p:"pod", c:5, n:"stół łóżko krzesło samochód drzewo szafa okno most biurko kanapa".split(" "), pl:"Kot śpi pod ___.", ko:N=>`고양이가 ${N} 밑에서 잔다.`},
+  {p:"w",   c:6, n:FW_PLACES, pl:"Jestem w ___.",         ko:N=>`${N}에 있다.`},
+  {p:"o",   c:6, n:"praca mama brat miasto film książka problem rodzina pogoda podróż".split(" "), pl:"Często myślę o ___.", ko:N=>`${N} 생각을 자주 한다.`},
+  {p:"przy",c:6, n:"stół okno drzwi biurko kasa ulica".split(" "), pl:"Czekam przy ___.", ko:N=>`${N} 옆에서 기다린다.`}
+];
+const fwKo=d=>String(d.ko||"").split(/[;,(·/]/)[0].trim();
+let _fwDecl=null;
+const fwDecl=p=>{ if(!_fwDecl){ _fwDecl={}; DECL_ALL.forEach(d=>{ if(!_fwDecl[d.p])_fwDecl[d.p]=d; }); } return _fwDecl[p]; };
+function fwGenPrep(){
+  for(let g=0;g<200;g++){
+    const fr=pickA(FW_PREP_FR), d=fwDecl(pickA(fr.n));
+    if(!d||!caseOK(d,fr.c,false))continue;
+    const ans=d.sg[fr.c-1], seen=new Set([norm(ans)]), opts=[];
+    [0,1,2,3,4,5].forEach(i=>{ const f=d.sg[i]; if(f&&!seen.has(norm(f))){ seen.add(norm(f)); opts.push(f); } });
+    if(opts.length<3)continue;
+    let pl=fr.pl;
+    if(fr.p==="z"&&zPrep(ans)!=="z")pl=pl.replace(" z ___"," ze ___");
+    if(fr.p==="w"&&/^(w|f)[^aeiouyąęó]/i.test(ans))pl=pl.replace(" w ___"," we ___");
+    const c=CASES[fr.c-1];
+    return {s:pl+` (${d.p})`, a:ans, o:shuffle(opts).slice(0,3), ko:fr.ko(fwKo(d)),
+      why:`${fr.p} + ${c.ko} → ${d.p} → ${ans}`, cc:fr.c};
+  }
+  return null;
+}
+const FW_Q=[["kilka","몇 개 있다"],["dużo","많다"],["mało","별로 없다"],["wiele","많다"],["pięć","다섯 개 있다"],["parę","두어 개 있다"]];
+function fwGenQuant(){
+  const P=DECL.filter(d=>d.pl&&d.t!=="m-pers");
+  for(let g=0;g<200;g++){
+    const d=pickA(P), q=pickA(FW_Q), ans=d.pl[1];
+    const seen=new Set([norm(ans)]), opts=[];
+    [d.pl[0],d.sg[1],d.sg[0],d.pl[4]].forEach(f=>{ if(f&&!seen.has(norm(f))){ seen.add(norm(f)); opts.push(f); } });
+    if(opts.length<3)continue;
+    const N=fwKo(d);
+    return {s:`Mam ${q[0]} ___. (${d.p})`, a:ans, o:opts.slice(0,3), ko:`${N}${fwJong(N)>0?"이":"가"} ${q[1]}. (${q[0]} + 속격 복수)`,
+      why:`${q[0]} + 속격 복수 → ${d.p} → ${ans}`, cc:2};
+  }
+  return null;
+}
+/* ---- 상태와 화면 ---- */
+let fw=null;
+function fwStart(cat,mode){ fw={cat, mode:mode||"all", cur:null, answered:false, run:[0,0], last:[]}; vState.deck=null; setTab("vocab"); }
+function fwNext(){
+  const F=FW[fw.cat], modes=fw.mode==="all"?F.modes.map(m=>m[0]):[fw.mode];
+  for(let g=0;g<40;g++){
+    const m=pickA(modes);
+    let it=null;
+    if(m==="case"&&Math.random()<0.85)it=fwGenPrep();
+    else if(m==="qgen"&&Math.random()<0.5)it=fwGenQuant();
+    if(!it){ const pool=FW_ITEMS[m==="case"?"choose":m]; it=pickA(pool); it={...it,cc:it.cc}; }
+    if(!it||fw.last.includes(it.s))continue;
+    fw.last=fw.last.concat([it.s]).slice(-8);
+    fw.cur={...it, opts:shuffle([it.a].concat(it.o)), mode:m}; fw.answered=false; return;
+  }
+}
+function fwStat(cat,ok){ S.fwStats=S.fwStats||{}; const s=S.fwStats[cat]=S.fwStats[cat]||[0,0]; s[1]++; if(ok)s[0]++; save(); }
+function viewFw(v){
+  const F=FW[fw.cat];
+  if(!fw.cur)fwNext();
+  const q=fw.cur, acc=fw.run[1]?Math.round(fw.run[0]/fw.run[1]*100):0;
+  const [b4,af]=q.s.split("___");
+  const hint=(af||"").match(/\(([^)]*)\)\s*$/);
+  const after=hint?(af||"").replace(/\s*\([^)]*\)\s*$/,""):(af||"");
+  v.innerHTML=`<div class="inline" style="margin:22px 0 12px"><button class="icon-btn" id="fwBack">← 단어장</button>
+      <b style="font-size:15px">${F.t} — 용법 연습</b>
+      <span class="mono" style="margin-left:auto;font-size:13px;color:var(--ink-3)">${fw.run[0]} / ${fw.run[1]} · ${acc}%</span></div>
+    <div class="xsteps" style="margin-bottom:10px">${[["all","전부 섞기"]].concat(F.modes).map(([k,t])=>`<button class="xstep ${fw.mode===k?"on":""}" data-fwm="${k}">${t}</button>`).join("")}
+      <button class="xstep" data-fwdeck="${F.deck}" style="margin-left:auto">낱말 카드로 →</button></div>
+    <details class="card pad" style="margin-bottom:12px"><summary style="cursor:pointer;font-weight:650">규칙 한눈에 보기</summary><div class="scroll-x" style="margin-top:10px">${F.rule}</div></details>
+    <div class="card pad" style="--cc:var(--c${q.cc||5})">
+      <div class="qstem">${esc((F.modes.find(m=>m[0]===q.mode)||["",""])[1])} — 빈칸에 알맞은 말은?</div>
+      <div class="qword small pl" style="margin-bottom:8px">${esc(b4)}<span style="display:inline-block;min-width:90px;border-bottom:2px solid var(--c${q.cc||5});margin:0 4px">&nbsp;</span>${esc(after)}
+        ${hint?`<span style="font-size:.6em;color:var(--ink-3);font-weight:500">(${esc(hint[1])})</span>`:""}</div>
+      <div style="color:var(--ink-2);font-size:14.5px;margin-bottom:20px">${esc(q.ko)}</div>
+      <div class="opts">${q.opts.map((o,i)=>`<button data-o="${i}"><span class="k">${i+1}</span><span class="pl" style="font-size:17px;font-weight:600">${esc(o)}</span></button>`).join("")}</div>
+      <div id="fwfb"></div></div>`;
+  $("#fwBack",v).onclick=()=>{ fw=null; render(); window.scrollTo(0,0); };
+  v.querySelectorAll("[data-fwm]").forEach(b=>b.onclick=()=>{ fw.mode=b.dataset.fwm; fw.cur=null; render(); });
+  v.querySelectorAll("[data-fwdeck]").forEach(b=>b.onclick=()=>{ const d=b.dataset.fwdeck; fw=null; startDeck(d); });
+  v.querySelectorAll("[data-o]").forEach(b=>b.onclick=()=>{
+    if(fw.answered)return; fw.answered=true;
+    const chosen=q.opts[+b.dataset.o], ok=chosen===q.a;
+    fw.run[1]++; if(ok)fw.run[0]++; fwStat(fw.cat,ok);
+    v.querySelectorAll("[data-o]").forEach(x=>{ x.disabled=true; const t=q.opts[+x.dataset.o];
+      if(t===q.a)x.classList.add("right"); else if(x===b)x.classList.add("wrong"); });
+    const at0=q.s.indexOf("___")===0, A=at0?cap(q.a):q.a;
+    const full=(b4+A+after).replace(/\s+/g," ").trim();
+    $("#fwfb",v).innerHTML=`<div class="qfeed ${ok?"ok":"no"}">
+      <div style="font-weight:700;color:${ok?"var(--good)":"var(--bad)"};margin-bottom:4px">${ok?"정답":"오답 — 정답은 "+esc(q.a)}</div>
+      <div class="pl" style="font-size:17px">${esc(b4)}<b style="color:var(--c${q.cc||5})">${esc(A)}</b>${esc(after)}</div>
+      <div style="font-size:13.5px;color:var(--ink-3);margin-top:2px">${esc(q.ko)}</div>
+      <div style="font-size:14px;margin-top:8px"><b>${esc(q.why)}</b></div>
+      <div class="inline" style="margin-top:12px">
+        <button class="btn" id="fwNext">다음 →</button>
+        <button class="icon-btn" data-say="${esc(full)}">🔊 듣기</button>
+        <span style="font-size:12px;color:var(--ink-3)">Enter 로도 넘어갑니다</span></div></div>`;
+    say(full);
+    const nx=()=>{ document.removeEventListener("keydown",h); fw.cur=null; render(); };
+    $("#fwNext",v).onclick=nx;
+    const h=e=>{ if(e.key==="Enter"){ e.preventDefault(); nx(); } };
+    document.addEventListener("keydown",h);
+  });
+}
+/* 단어장 목록 · 카드 화면 어디서 눌러도 */
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-fw]"); if(!b)return;
+  e.stopPropagation(); micStop(); koAbort(); prac=pracNew("");
+  fwStart(b.dataset.fw);
+},true);
+const FW_DECK={adv:"adv",pron1:"pron",prep1:"prep",quant:"quant"};
+function fwSection(){
+  const st=S.fwStats||{};
+  return `<div class="card pad" style="margin:0 0 14px">
+    <div class="eyebrow" style="margin-bottom:6px">기능어 용법 연습</div>
+    <div style="font-size:13.5px;color:var(--ink-2);margin-bottom:10px">부사·대명사·전치사·수량어는 뜻보다 <b>어떤 격과 함께, 어디에 쓰는지</b>가 핵심입니다. 문장 빈칸으로 연습하세요.</div>
+    <div class="grid g4">${Object.entries(FW).map(([k,F])=>{const s=st[k];
+      return `<button class="qtype" data-fw="${k}" style="padding:14px 16px"><b>${F.t}</b><small>${F.modes.map(m=>m[1]).join(" · ")}${s&&s[1]?`<br><span class="mono">정확도 ${Math.round(s[0]/s[1]*100)}% · ${s[1]}문항</span>`:""}</small></button>`;}).join("")}</div></div>`;
+}
+
 function vocabDeckList(){
   const decks=DECKS.filter(d=>lvOK(d.lv)).slice().sort((x,y)=>LEVELS.indexOf(x.lv)-LEVELS.indexOf(y.lv));
   const shown=wordsAt().length;   /* 중복 표제어는 한 번만 센다 */
@@ -26660,6 +27028,7 @@ function vocabDeckList(){
     <span style="font-size:13px;color:var(--ink-3)">카드 방향</span>
     <span class="xsteps" style="margin:0">${cardDirBtns(false)}</span>
     <span style="font-size:12.5px;color:var(--ink-3)">${S.cardDir==="ko"?"한국어 뜻을 보고 폴란드어를 쓰거나 말해서 맞힙니다.":"폴란드어를 보고 뜻을 맞힙니다."}</span></div>
+  ${fwSection()}
   <input class="search" id="wq" placeholder="${lvLabel()} 단어 ${shown}개 검색 — 폴란드어나 한국어로">
   <div id="qres"></div>
   <div class="grid g3 deckgrid" style="margin-top:16px">
@@ -27180,6 +27549,7 @@ function vocabStudy(v){
     <button class="icon-btn" id="back">← 단어장</button>
     <b style="font-size:15px">${title}</b>
     <span class="xsteps" style="margin:0">${cardDirBtns(true)}</span>
+    ${FW_DECK[vState.deck]?`<button class="btn red sm" data-fw="${FW_DECK[vState.deck]}">용법 연습 →</button>`:""}
     <span class="vnav">
       <button class="icon-btn" id="vPrev" ${i===0?"disabled":""} title="이전 단어 (←)" aria-label="이전 단어">◀</button>
       <button class="icon-btn" id="vNext" title="표시하지 않고 다음 단어로 (→)" aria-label="넘기기"><span class="vnav-t">넘기기 </span>▶</button>
