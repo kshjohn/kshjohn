@@ -3938,7 +3938,7 @@ const CASES = [
         "<code>mieć, lubić, kochać, znać, widzieć, kupować, jeść, pić</code> 뒤",
         "<b>방향</b>을 뜻하는 <code>na, w, przez, za</code> 뒤: <code>Idę na spacer.</code>",
         "<b>핵심 규칙</b>: 남성 무생물은 주격과 같고, 남성 생물은 <b>속격</b>과 같다."],
-   preps:["na","~ 위에, ~에서 (장소격); ~로, ~하러 (대격)","przez","za","po","o (~에 대해 요청)"],
+   preps:["na","w","przez","za","po","o (~에 대해 요청)"],
    tbl:[["남성 (무생물)","주격과 동일","Kupuję chleb."],
         ["남성 (생물)","속격과 동일 -a","Mam psa. / Znam Marka."],
         ["여성","-ę","kawa → kawę, książka → książkę"],
@@ -5516,12 +5516,12 @@ const PRONOUNS=[
   {p:"ja",  ko:"나",         f:["ja","mnie","mnie / mi","mnie","mną","mnie"]},
   {p:"ty",  ko:"너",         f:["ty","ciebie / cię","tobie / ci","ciebie / cię","tobą","tobie"]},
   {p:"on",  ko:"그",         f:["on","jego / go / niego","jemu / mu","jego / go / niego","nim","nim"]},
-  {p:"ona", ko:"그녀",       f:["ona","그녀, 그 사람, 걔; (여성 명사) 그것","jej","ją / nią","nią","niej"]},
+  {p:"ona", ko:"그녀",       f:["ona","jej / niej","jej","ją / nią","nią","niej"]},
   {p:"ono", ko:"그것 (중성)", f:["ono","jego / go","jemu / mu","je / nie","nim","nim"]},
   {p:"my",  ko:"우리",       f:["my","nas","nam","nas","nami","nas"]},
-  {p:"wy",  ko:"너희",       f:["wy","너희, 여러분 (친한 사이)","wam","was","wami","was"]},
-  {p:"oni", ko:"그들 (남성인간)", f:["oni","그들, 그 사람들, 걔들 (남자 포함)","im","ich / nich","nimi","nich"]},
-  {p:"one", ko:"그들 (그 외)",   f:["one","그들 (여자들); 그것들 (사물·동물·아이들)","im","je / nie","nimi","nich"]},
+  {p:"wy",  ko:"너희",       f:["wy","was","wam","was","wami","was"]},
+  {p:"oni", ko:"그들 (남성인간)", f:["oni","ich / nich","im","ich / nich","nimi","nich"]},
+  {p:"one", ko:"그들 (그 외)",   f:["one","ich / nich","im","je / nie","nimi","nich"]},
   {p:"się", ko:"자기 자신 (재귀)", f:["—","siebie","sobie","się / siebie","sobą","sobie"]}
 ];
 const POSSESS=[
@@ -26954,6 +26954,206 @@ function fwNext(){
     fw.cur={...it, opts:shuffle([it.a].concat(it.o)), mode:m}; fw.answered=false; return;
   }
 }
+/* ---- 보기 풀이: 답을 확인하면 보기마다 뜻(몇 격 꼴인지까지)과 예문을 보여 준다 ----
+   뜻: 대명사 꼴 표 → 명사·형용사·지시사 변화표에서 찾은 '어느 낱말의 몇 격' → 단어장 뜻
+   예문: 예문 모음에서 그 꼴이 그대로 쓰인 짧은 문장 → 없으면 격 틀 문장 → 그래도 없으면 아래 손 예문 */
+const FW_PRON_GLOSS={ja:"나 — 주격",mnie:"나를·나의·나에게 — 긴 꼴 (속격·대격·여격·전치격)",mi:"나에게 — 여격 짧은 꼴",mną:"나와·나로 — 조격 (ze mną)",
+  ty:"너 — 주격",ciebie:"너를·너의 — 긴 꼴 (강조·전치사 뒤)",cię:"너를 — 대격·속격 짧은 꼴",tobie:"너에게·너에 대해 — 여격·전치격 긴 꼴",ci:"너에게 — 여격 짧은 꼴 / 이 사람들 — ten 의 남성인간 복수",tobą:"너와 — 조격 (z tobą)",
+  on:"그 — 주격",jego:"그를·그의 — 긴 꼴 / 그의 (소유, 변하지 않음)",go:"그를 — 대격·속격 짧은 꼴",niego:"그를·그의 — 전치사 뒤 (dla niego, do niego)",jemu:"그에게 — 여격 긴 꼴 (강조)",mu:"그에게 — 여격 짧은 꼴",nim:"그와·그에 대해 — 조격·전치격 (z nim, o nim)",
+  ona:"그녀 — 주격",jej:"그녀의·그녀에게 — 속격·여격 / 그녀의 (소유)",ją:"그녀를 — 대격",nią:"그녀와 — 조격 (z nią)",niej:"그녀의·그녀에 대해 — 전치사 뒤 (dla niej, o niej)",
+  my:"우리 — 주격",nas:"우리를·우리의 — 속격·대격·전치격",nam:"우리에게 — 여격",nami:"우리와 — 조격 (z nami)",
+  wy:"너희 — 주격",was:"너희를·너희의 — 속격·대격·전치격",wam:"너희에게 — 여격",wami:"너희와 — 조격 (z wami)",
+  oni:"그들 — 남성인간 주격",one:"그들·그것들 — 남성인간 외 주격",ich:"그들을·그들의 — 속격·대격 / 그들의 (소유)",im:"그들에게 — 여격",nimi:"그들과 — 조격 (z nimi)",nich:"그들의·그들에 대해 — 전치사 뒤",
+  ilu:"몇 명 — ile 의 남성인간 꼴 (+ 속격 복수)",ile:"몇, 얼마 (+ 속격)",kilku:"몇 명 — kilka 의 남성인간 꼴",ilość:"양, 수량 (명사)"};
+const FW_EX={
+  "żebyś":["Chcę, żebyś odpoczął.","네가 좀 쉬었으면 좋겠어."],
+  "jemu":["Jemu to nie przeszkadza, ale mnie tak.","그 사람한테는 괜찮지만 나는 거슬려."],
+  "wam":["Dziękuję wam za pomoc.","도와줘서 너희에게 고마워."],
+  "wami":["Mogę iść z wami?","너희랑 같이 가도 돼?"],
+  "panem":["Czy mogę porozmawiać z panem?","선생님과 잠깐 이야기할 수 있을까요?"],
+  "twojemu":["Pomogłem wczoraj twojemu bratu.","어제 네 동생을 도와줬어."],
+  "tamta":["Tamta książka jest ciekawsza.","저 책이 더 재미있다."],
+  "waszych":["Dobrze pamiętam waszych rodziców.","너희 부모님을 잘 기억해."],
+  "wasi":["Wasi sąsiedzi są bardzo mili.","너희 이웃들은 아주 친절하다."],
+  "wasze":["Gdzie są wasze bilety?","너희 표는 어디 있어?"],
+  "waszym":["Mieszkam w waszym mieście od roku.","너희 도시에 산 지 1년 됐다."],
+  "komu":["Komu mam to oddać?","이거 누구한테 돌려줘야 해?"],
+  "najwolniej":["Ten komputer działa najwolniej ze wszystkich.","이 컴퓨터가 모든 것 중에서 가장 느리게 돌아간다."],
+  "najszybszy":["To najszybszy pociąg do Gdańska.","이게 그단스크로 가는 가장 빠른 기차다."],
+  "zimniej":["W nocy będzie zimniej.","밤에는 더 추워질 거야."],
+  "najzimniej":["W styczniu jest najzimniej.","1월이 가장 춥다."],
+  "najwcześniej":["Kto dziś przyszedł najwcześniej?","오늘 누가 제일 일찍 왔어?"],
+  "regularny":["Mam teraz regularny rytm dnia.","요즘 하루 리듬이 규칙적이다."],
+  "tysiąca":["Na koncert przyszło około tysiąca osób.","콘서트에 천 명쯤 왔다."],
+  "kilometra":["Do pracy mam pół kilometra.","직장까지 500미터다."],
+  "litry":["Kupiłem dwa litry mleka.","우유 2리터를 샀다."],
+  "litrów":["Ten samochód pali sześć litrów benzyny.","이 차는 휘발유를 6리터 먹는다."],
+  "polaka":["Znam jednego Polaka z Gdańska.","그단스크 출신 폴란드 사람 한 명을 안다."],
+  "polakami":["W pracy rozmawiam z Polakami po polsku.","직장에서 폴란드 사람들과 폴란드어로 이야기한다."],
+  "koleżanek":["Mam wiele koleżanek z pracy.","직장 동료(여자)가 많다."],
+  "koleżankom":["Dziękuję koleżankom za pomoc.","동료들에게 도와줘서 고맙다고 했다."]
+};
+Object.assign(FW_EX,{
+  "kogo":["Kogo szukasz?","누구를 찾고 있어?"],
+  "ilu":["Ilu was jest?","너희 몇 명이야?"],
+  "nich":["Czekam na nich od godziny.","그 사람들을 한 시간째 기다리고 있어."],
+  "tamtą":["Znasz tamtą dziewczynę?","저 여자애 알아?"],
+  "regularnie":["Ćwiczę regularnie trzy razy w tygodniu.","일주일에 세 번 꾸준히 운동한다."],
+  "dzienny":["Mój dzienny plan jest bardzo napięty.","내 하루 일정은 아주 빡빡하다."],
+  "najlepiej":["Najlepiej przyjdź rano.","아침에 오는 게 제일 좋아."],
+  "bułek":["Kupiłem pięć bułek na śniadanie.","아침으로 롤빵 다섯 개를 샀다."],
+  "ziemniak":["Ten ziemniak jest zielony — nie jedz go.","이 감자는 초록색이야 — 먹지 마."],
+  "buta":["Nie mogę znaleźć drugiego buta.","신발 한 짝을 못 찾겠어."],
+  "oliwa":["Oliwa z oliwek jest zdrowa.","올리브유는 건강에 좋다."],
+  "litra":["Wypij pół litra wody.","물 반 리터를 마셔."],
+  "dniem":["Z każdym dniem jest cieplej.","날이 갈수록 따뜻해진다."],
+  "mleku":["Dzięki mleku kawa jest łagodniejsza.","우유 덕분에 커피가 더 부드럽다."],
+  "jabłkami":["Upiekłam ciasto z jabłkami.","사과 케이크를 구웠다."],
+  "ciastem":["Sąsiadka poczęstowała nas ciastem.","이웃이 우리에게 케이크를 대접했다."],
+  "zupą":["Obiad zawsze zaczynamy zupą.","점심은 늘 수프로 시작한다."],
+  "chlebem":["Jem zupę z chlebem.","수프를 빵과 함께 먹는다."],
+  "szynką":["Poproszę kanapkę z szynką.","햄 샌드위치 하나 주세요."],
+  "godziną":["Wróciłem przed godziną.","한 시간 전에 돌아왔다."],
+  "pizzą":["Poczęstowałem gości pizzą.","손님들에게 피자를 대접했다."],
+  "złotymi":["Zapłaciłem dwoma złotymi.","2즈워티로 냈다."],
+  "soki":["Dzieci lubią soki owocowe.","아이들은 과일 주스를 좋아한다."],
+  "oliwy":["Dodaj trochę oliwy.","올리브유를 조금 넣어."],
+  "oliwę":["Kup oliwę z oliwek.","올리브유를 사 와."],
+  "pomidorami":["Lubię kanapki z pomidorami.","토마토 넣은 샌드위치를 좋아한다."],
+  "bułkami":["Koszyk z bułkami stoi na stole.","롤빵 바구니가 탁자 위에 있다."],
+  "pieniądzach":["Nie myśl ciągle o pieniądzach.","돈 생각만 하지 마."],
+  "pieniądzom":["Dzięki pieniądzom od rodziców kupiłem mieszkanie.","부모님이 준 돈 덕분에 집을 샀다."],
+  "osobach":["Mówimy o osobach, które pracują w nocy.","밤에 일하는 사람들 이야기를 하고 있다."],
+  "koleżanki":["Nie ma dziś koleżanki z pracy.","오늘 직장 동료(여자)가 없다."]
+});
+/* 단어장에 따로 없는 부사·비교급·꼴의 뜻 */
+const FW_MEAN={szybko:"빠르게, 빨리 (szybki 의 부사)",szybciej:"더 빨리 — szybko 의 비교급",najszybciej:"가장 빨리 — szybko 의 최상급",
+  zimno:"춥다, 차갑게 — 날씨·느낌 (jest zimno)",zimniej:"더 춥다 — zimno 의 비교급",najzimniej:"가장 춥다 — zimno 의 최상급",
+  pięknie:"아름답게 (piękny 의 부사)",cicho:"조용히; (장소가) 조용하다",miło:"기분 좋게; 즐겁다 (było miło)",regularnie:"꾸준히, 규칙적으로",
+  wolno:"천천히; (허락) ~해도 된다",wolniej:"더 천천히 — wolno 의 비교급",najwolniej:"가장 천천히 — wolno 의 최상급",
+  więcej:"더 많이 — dużo 의 비교급",najwięcej:"가장 많이 — dużo 의 최상급",mniej:"덜, 더 적게 — mało 의 비교급",najmniej:"가장 적게 — mało 의 최상급",
+  bardziej:"더 (~한) — bardzo 의 비교급, 긴 형용사 앞",najbardziej:"가장 (~한) — bardzo 의 최상급",
+  lepiej:"더 잘, 더 낫게 — dobrze 의 비교급",najlepiej:"가장 잘; ~하는 게 제일 좋다 — dobrze 의 최상급",
+  wcześniej:"더 일찍; 전에 — wcześnie 의 비교급",najwcześniej:"가장 일찍 — wcześnie 의 최상급",
+  codziennie:"매일",dziennie:"하루에 (횟수: trzy razy dziennie)",dzienny:"하루의, 낮의 (형용사)",
+  raz:"한 번; 1회",razy:"번, 회 — raz 의 복수 (dwa razy, pięć razy)",razu:"번 — raz 의 속격 (ani razu 한 번도)",razem:"함께, 같이; (계산) 다 합해서",
+  "żebyś":"żeby + 너 (2인칭 어미 -ś): 네가 ~하기를",cisza:"고요, 정적 (명사)",
+  lepsza:"더 좋은 (여성) — dobry 의 비교급",piękny:"아름다운 (남성 주격)",piękna:"아름다운 (여성 주격)",piękne:"아름다운 (중성·복수 주격)",
+  polacy:"폴란드 사람들 — Polak 의 남성인간 주격 복수",polaka:"Polak 의 속격·대격 단수",polaków:"Polak 의 속격·대격 복수",polakami:"Polak 의 조격 복수",
+  tysiąc:"천 (1000)",tysiące:"tysiąc 의 주격 복수 (2·3·4 tysiące)",tysiąca:"tysiąc 의 속격 단수 (około tysiąca)",tysiącem:"tysiąc 의 조격 단수",
+  kilometry:"kilometr 의 주격 복수 (2·3·4 뒤)",kilometra:"kilometr 의 속격 단수",kilometrów:"kilometr 의 속격 복수 (5 이상 뒤)",kilometrami:"kilometr 의 조격 복수",
+  litry:"litr 의 주격 복수 (2·3·4 뒤)",litra:"litr 의 속격 단수 (pół litra)",litrów:"litr 의 속격 복수 (5 이상 뒤)",
+  kilogramy:"kilogram 의 주격 복수 (2·3·4 뒤)",kilograma:"kilogram 의 속격 단수",kilogramów:"kilogram 의 속격 복수 (5 이상 뒤)",
+  bułki:"bułka(롤빵)의 속격 단수 · 주격 복수",bułek:"bułka(롤빵)의 속격 복수",bułka:"롤빵 — 주격 단수",bułkami:"bułka 의 조격 복수",
+  koleżanki:"koleżanka(여자 동료)의 속격 단수 · 주격 복수",koleżanek:"koleżanka 의 속격 복수",koleżankom:"koleżanka 의 여격 복수",
+  zdjęcia:"zdjęcie(사진)의 속격 단수 · 주격 복수",zdjęć:"zdjęcie(사진)의 속격 복수",zdjęciami:"zdjęcie 의 조격 복수",
+  pomidory:"pomidor(토마토)의 주격 복수",pomidorów:"pomidor 의 속격 복수",pomidora:"pomidor 의 속격 단수",pomidorami:"pomidor 의 조격 복수",
+  oliwa:"올리브유 — 주격",oliwy:"oliwa 의 속격 단수",oliwę:"oliwa 의 대격 단수",oliwą:"oliwa 의 조격 단수",
+  pieniądze:"돈 — 주격 (늘 복수)",pieniędzy:"pieniądze 의 속격",pieniądzach:"pieniądze 의 전치격",pieniądzom:"pieniądze 의 여격",
+  soki:"sok(주스)의 주격 복수",chleby:"chleb(빵)의 주격 복수",sole:"sól(소금)의 주격 복수",prace:"praca(일)의 주격 복수",cukry:"cukier 의 주격 복수 (화학 '당류' 외엔 드묾)",
+  ziemniaki:"ziemniak(감자)의 주격 복수",ziemniaków:"ziemniak 의 속격 복수",ziemniakami:"ziemniak 의 조격 복수",ziemniak:"감자 — 주격 단수",
+  buty:"but(신발)의 주격 복수",butów:"but 의 속격 복수",butami:"but 의 조격 복수",buta:"but 의 속격 단수",
+  regularny:"규칙적인 (남성 주격)",regularna:"규칙적인 (여성 주격)",regularne:"규칙적인 (중성·복수 주격)",lepszy:"더 좋은 (남성) — dobry 의 비교급",gorszy:"더 나쁜 — zły 의 비교급"};
+/* twój·swój 는 mój 처럼, wasz 는 nasz 처럼, tamten 은 ten 처럼 변한다 */
+const FW_ALIKE=[[/^tw(?=[oó])/,"m","twój"],[/^sw(?=[oó])/,"m","swój"],[/^wasz/,"nasz","wasz"],[/^wasi$/,"nasi","wasz"],[/^tamt/,"t","tamten"]];
+/* 표에 없는 명사는 문제의 기본형과 어미로 격을 판별한다 */
+const FW_ENDS=[[/ami$/,5,true,"조격 복수"],[/ach$/,6,true,"전치격 복수"],[/om$/,3,true,"여격 복수"],[/ów$/,2,true,"속격 복수"],
+  [/(em|iem)$/,5,false,"조격 단수"],[/ą$/,5,false,"조격 단수 (여성)"],[/ę$/,4,false,"대격 단수 (여성)"],[/owi$/,3,false,"여격 단수"]];
+/* -y·-i·-e·-u 처럼 여러 격에 걸치는 어미는 추정하지 않는다 — 틀린 설명보다 '다른 격 꼴'이 낫다 */
+let _fwIdx=null;
+function fwIndex(){
+  if(_fwIdx)return _fwIdx;
+  const dict=new Map(), forms=new Map(), CK=["주격","속격","여격","대격","조격","전치격","호격"];
+  const add=(k,v)=>{ k=String(k||"").toLowerCase(); if(!k||k==="—")return; if(!forms.has(k))forms.set(k,[]); forms.get(k).push(v); };
+  ALLWORDS.forEach(w=>String(w.p).split(/\s*\/\s*/).forEach(f=>{ const k=f.toLowerCase(); if(!dict.has(k))dict.set(k,w); }));
+  DECL_ALL.forEach(d=>{
+    d.sg.forEach((f,i)=>add(f,{kind:"n",base:d.p,ko:fwKo(d),ci:i+1,pl:false,label:`${d.p}(${fwKo(d)})의 ${CK[i]} 단수`}));
+    (d.pl||[]).forEach((f,i)=>add(f,{kind:"n",base:d.p,ko:fwKo(d),ci:i+1,pl:true,label:`${d.p}(${fwKo(d)})의 ${CK[i]} 복수`}));
+  });
+  ADJS.forEach(a=>{ const t=declAdj(a);
+    SLOT_KEYS.forEach((k,si)=>t[k].forEach((f,ci)=>add(f,{kind:"a",adj:a,slot:k,ci:ci+1,label:`${a.base}(${koAdjOf(a)})의 ${ADJCOLS[si]} ${CK[ci]}`})));
+    if(a.comp&&a.comp!=="—"){ add(a.comp,{kind:"c",label:`${a.base}(${koAdjOf(a)})의 비교급`}); add(a.sup,{kind:"c",label:`${a.base}(${koAdjOf(a)})의 최상급`}); } });
+  PRON7.forEach(p=>{ const b=p.pl.split(" / "), kc=p.pl==="kto / co";
+    const cols=kc?["","","","",""]:["남성 ","여성 ","중성 ","남성인간 복수 ","그 외 복수 "];
+    p.rows.forEach((r,ci)=>r.forEach((cell,co)=>{ const base=co===0?b[0]:co===1?(b[1]||b[0]):co===2?b[b.length-1]:b[0];
+      String(cell).split(" / ").forEach(f=>add(f,{kind:"p",label:`${base}의 ${cols[co]}${CK[ci]}`})); })); });
+  _fwIdx={dict,forms}; return _fwIdx;
+}
+const fwRe=o=>new RegExp("(^|[^\\p{L}])("+String(o).replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")(?=[^\\p{L}]|$)","iu");
+function fwGloss(opt,q){
+  const o=String(opt).trim(), lo=o.toLowerCase(), I=fwIndex();
+  const fs=(I.forms.get(lo)||[]);
+  /* 같은 낱말의 여러 칸은 한 줄로 — '좋은의 남성 속격 · 중성 속격 …' 이 길어지지 않게 셋까지 */
+  const labels=[...new Set(fs.map(x=>x.label))].slice(0,3);
+  const w=I.dict.get(lo);
+  let mean=FW_PRON_GLOSS[lo]||FW_MEAN[lo]||(labels.length?labels.join(" · ")+(fs.length>3?" …":""):"")||(w?w.k:"");
+  if(!FW_PRON_GLOSS[lo]&&!FW_MEAN[lo]&&labels.length&&w&&!labels[0].startsWith(w.p+"("))mean=w.k+" / "+mean;
+  if(!mean){
+    /* 같은 변화를 하는 낱말의 표에서 */
+    for(const [re,to,base] of FW_ALIKE){ if(re.test(lo)){ const alt=(I.forms.get(lo.replace(re,to))||[]).filter(x=>x.kind==="p");
+      if(alt.length){ mean=[...new Set(alt.map(x=>x.label.replace(/^\S+의/,base+"의")))].slice(0,3).join(" · "); break; } } }
+  }
+  if(!mean){
+    /* 형용사 꼴 → 단어장의 기본형 */
+    const stem=lo.replace(/(ego|emu|ymi|imi|ych|ich|ym|im|ej|ą|a|e|y|i)$/,"");
+    const base=[stem+"y",stem+"i"].map(b=>I.dict.get(b)).find(x=>x&&(x.g==="adj"||/[yi]$/.test(x.p)));
+    if(base){ const end=lo.slice(stem.length);
+      const lab={y:"남성 주격",i:"남성 주격",a:"여성 주격",e:"중성·복수 주격",ą:"여성 대격·조격",ej:"여성 속격·여격·전치격",ego:"남성·중성 속격",emu:"남성·중성 여격",ym:"남성·중성 조격·전치격",im:"남성·중성 조격·전치격",ych:"복수 속격·전치격",ich:"복수 속격·전치격",ymi:"복수 조격",imi:"복수 조격"}[end]||"";
+      mean=`${base.p}(${String(base.k).split(/[;,]/)[0]})의 ${lab}`; }
+  }
+  if(!mean){
+    /* 문제에 적힌 기본형 + 어미 */
+    const h=(q.s.match(/\(([^)]*)\)\s*$/)||[])[1], hw=h&&I.dict.get(h.toLowerCase());
+    if(h&&!/[ ,–]/.test(h)){
+      const ko=hw?String(hw.k).split(/[;,]/)[0]:"";
+      const dd=fwDecl(h);
+      if(lo===h.toLowerCase())mean=`${h}${ko?"("+ko+")":""}의 기본형 (주격)`;
+      /* 격변화표가 있는 낱말인데 그 꼴이 표에 없으면 — 실제로 쓰지 않는 함정 꼴 */
+      else if(dd&&dd.pl)mean=`실제로 쓰지 않는 꼴 (함정) — ${h}의 격변화표에 없습니다`;
+      else{ const e=FW_ENDS.find(([re])=>re.test(lo));
+        mean=`${h}${ko?"("+ko+")":""}의 ${e?e[3]:"다른 격 꼴"}`; }
+    }
+  }
+  /* 예문 */
+  let ex=null;
+  if(FW_EX[lo])ex={pl:FW_EX[lo][0],ko:FW_EX[lo][1]};
+  if(!ex){
+    const re=fwRe(o), qs=norm(q.s.replace("___",q.a).replace(/\s*\([^)]*\)\s*$/,"")), hits=[];
+    for(let i=0;i<SENTENCES.length&&hits.length<30;i++){ const s=SENTENCES[i];
+      if(s.pl.length<=90&&lvOK(s.lv)&&re.test(s.pl)&&norm(s.pl)!==qs)hits.push(s); }
+    if(hits.length){
+      /* 같은 꼴이 여러 격일 때(rodzinie = 여격·전치격) 문제에서 묻는 격으로 쓰인 문장을 먼저 */
+      const nf=fs.find(x=>x.kind==="n"), want=(o===q.a&&q.cc)?q.cc:(nf?nf.ci:0);
+      const tagged=want?hits.filter(s=>(s.marks||[]).some(m=>m.c===want&&String(m.w).toLowerCase().split(/\s+/).includes(lo))):[];
+      const pool=(tagged.length?tagged:hits).sort((a,b)=>a.pl.length-b.pl.length);
+      const s=pickA(pool.slice(0,4)); ex={pl:s.pl,ko:s.ko}; }
+  }
+  if(!ex){ const n=fs.find(x=>x.kind==="n"&&x.ci<=6), a=fs.find(x=>x.kind==="a");
+    /* 틀 문장은 격변화표로 확인된 꼴에만 — 추정한 꼴로 문장을 만들면 틀린 예문이 된다 */
+    /* 여격·조격 틀(Dzięki ___, Stoję przed ___)은 명사에 따라 뜻이 어색해져 쓰지 않는다 */
+    if(n&&n.ci!==3&&n.ci!==5){ const fr=frameFill(n.ci,o,n.pl); if(fr&&fr.pl)ex={pl:fr.pl,ko:fr.ko+" (격 틀 문장)"}; }
+    else if(a){ const fr=(CASE_EX[a.ci]||[]).find(e=>e.s===a.slot); if(fr)ex={pl:exPut(fr.pl,o),ko:exKo(fr,koAdjOf(a.adj))}; } }
+  return {mean,ex};
+}
+function fwMark(pl,o){ const m=pl.match(fwRe(o)); if(!m)return esc(pl);
+  const i=m.index+m[1].length, j=i+m[2].length;
+  return esc(pl.slice(0,i))+`<b style="color:var(--carmine)">${esc(pl.slice(i,j))}</b>`+esc(pl.slice(j)); }
+function fwOptsHtml(q){
+  const order=[q.a].concat(q.opts.filter(o=>o!==q.a));
+  return `<div style="margin-top:14px;border-top:1px solid color-mix(in srgb,var(--ink) 12%,transparent);padding-top:10px">
+    <div class="eyebrow" style="margin-bottom:2px">보기 풀이 — 뜻과 예문</div>
+    ${order.map(o=>{ const g=fwGloss(o,q), ok=o===q.a;
+      return `<div style="padding:10px 0;border-bottom:1px solid color-mix(in srgb,var(--ink) 7%,transparent)">
+        <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap">
+          <span style="font-weight:800;min-width:14px;color:${ok?"var(--good)":"var(--ink-3)"}">${ok?"✓":"✗"}</span>
+          <b class="pl" style="font-size:16px;color:${ok?"var(--good)":"var(--ink)"}">${esc(o)}</b>
+          <span style="font-size:13.5px;color:var(--ink-2)">${esc(g.mean||"—")}</span></div>
+        ${g.ex?`<div class="pl" style="font-size:15px;margin:4px 0 0 22px">${fwMark(g.ex.pl,o)} <button class="spk" data-say="${esc(g.ex.pl)}">🔊</button></div>
+          <div style="font-size:12.5px;color:var(--ink-3);margin-left:22px">${esc(g.ex.ko)}</div>`
+          :`<div style="font-size:12px;color:var(--ink-3);margin-left:22px">예문이 아직 없습니다</div>`}</div>`; }).join("")}
+  </div>`;
+}
+
 function fwStat(cat,ok){ S.fwStats=S.fwStats||{}; const s=S.fwStats[cat]=S.fwStats[cat]||[0,0]; s[1]++; if(ok)s[0]++; save(); }
 function viewFw(v){
   const F=FW[fw.cat];
@@ -26991,6 +27191,7 @@ function viewFw(v){
       <div class="pl" style="font-size:17px">${esc(b4)}<b style="color:var(--c${q.cc||5})">${esc(A)}</b>${esc(after)}</div>
       <div style="font-size:13.5px;color:var(--ink-3);margin-top:2px">${esc(q.ko)}</div>
       <div style="font-size:14px;margin-top:8px"><b>${esc(q.why)}</b></div>
+      ${fwOptsHtml(q)}
       <div class="inline" style="margin-top:12px">
         <button class="btn" id="fwNext">다음 →</button>
         <button class="icon-btn" data-say="${esc(full)}">🔊 듣기</button>
